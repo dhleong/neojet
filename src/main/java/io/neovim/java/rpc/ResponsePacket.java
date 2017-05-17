@@ -12,6 +12,11 @@ public class ResponsePacket extends Packet {
         type = Type.RESPONSE;
     }
 
+    public <T> T result() {
+        //noinspection unchecked
+        return (T) result;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

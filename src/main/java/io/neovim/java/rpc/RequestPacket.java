@@ -1,6 +1,8 @@
 package io.neovim.java.rpc;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * @author dhleong
@@ -41,7 +43,10 @@ public class RequestPacket extends Packet {
     public static RequestPacket create(String method) {
         return create(method, Collections.emptyList());
     }
-    public static RequestPacket create(String method, Object args) {
+    public static RequestPacket create(String method, Object...args) {
+        return create(method, Arrays.asList(args));
+    }
+    public static RequestPacket create(String method, List<?> args) {
         return create(REQUEST_ID_UNSET, method, args);
     }
 

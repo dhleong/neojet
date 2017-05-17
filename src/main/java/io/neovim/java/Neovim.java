@@ -5,7 +5,6 @@ import io.neovim.java.rpc.ResponsePacket;
 import io.reactivex.Single;
 
 import java.io.Closeable;
-import java.util.Arrays;
 
 /**
  * @author dhleong
@@ -23,6 +22,18 @@ public class Neovim implements Closeable {
         rpc.close();
     }
 
+    /**
+     * Execute a single ex command
+     */
+    public void command(String command) {
+        rpc.sendRequest(
+            RequestPacket.create(
+                "nvim_command",
+                command
+            )
+        );
+    }
+
     public Single<ResponsePacket> getApiInfo() {
         return rpc.request(
             RequestPacket.create("vim_get_api_info")
@@ -34,17 +45,25 @@ public class Neovim implements Closeable {
      */
     public void uiAttach(int width, int height, int rgb) {
         rpc.sendRequest(
-            RequestPacket.create("ui_attach",
-                Arrays.asList(width, height, null))
+            RequestPacket.create(
+                "ui_attach",
+                width, height, null
+            )
         );
     }
 
+    /**
+     * Unregister as remote UI
+     */
+    public void uiDetach() {
+        rpc.sendRequest(RequestPacket.create("ui_detach"));
+    }
+
     public static Neovim attachEmbedded() {
-        return new Neovim(Rpc.createEmbedded());
+        return attach(Rpc.createEmbedded());
     }
 
     public static Neovim attach(Rpc rpc) {
         return new Neovim(rpc);
     }
-
 }

@@ -4,6 +4,8 @@ import io.neovim.java.rpc.ResponsePacket;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.List;
+
 import static io.neovim.java.NeovimAssertions.assertThat;
 
 /**
@@ -32,6 +34,7 @@ public class NeovimTest {
         assertThat(packet)
             .isNotNull()
             .hasError(null);
-        assertThat(packet.result).isNotNull();
+        assertThat(packet.result).isInstanceOf(List.class);
     }
+
 }

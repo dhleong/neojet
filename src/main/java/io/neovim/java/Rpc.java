@@ -2,11 +2,13 @@ package io.neovim.java;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.neovim.java.rpc.EmbedChannel;
 import io.neovim.java.rpc.NeovimObjectMapper;
+import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.Packet;
 import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
+import io.neovim.java.rpc.channel.EmbedChannel;
+import io.neovim.java.rpc.channel.FallbackChannel;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
@@ -23,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,7 +39,9 @@ public class Rpc implements Closeable {
     private static final long TIMEOUT = 5;
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.SECONDS;
 
-    public interface Channel {
+    public interface Channel extends Closeable {
+        void tryOpen() throws Exception;
+
         InputStream getInputStream();
 
         InputStream getErrorStream();
@@ -44,10 +49,11 @@ public class Rpc implements Closeable {
         OutputStream getOutputStream();
     }
 
-    final ObjectMapper mapper;
+    final Rpc.Channel channel;
     final OutputStream out;
     final InputStream in;
     final InputStream err;
+    final ObjectMapper mapper;
 
     final AtomicBoolean closed = new AtomicBoolean(false);
     final AtomicInteger nextId = new AtomicInteger(0);
@@ -56,10 +62,12 @@ public class Rpc implements Closeable {
     final UnicastProcessor<Packet> outgoing = UnicastProcessor.create();
     final Flowable<Packet> incoming;
 
-    private Rpc(@Nonnull InputStream in, @Nonnull OutputStream out, InputStream err) {
-        this.in = in;
-        this.out = out;
-        this.err = err;
+    private Rpc(@Nonnull Channel channel) {
+        this.channel = channel;
+        in = channel.getInputStream();
+        out = channel.getOutputStream();
+        err = channel.getErrorStream();
+
         mapper = NeovimObjectMapper.newInstance();
 
         incoming = observeIncoming()
@@ -73,12 +81,16 @@ public class Rpc implements Closeable {
 
     @Override
     public void close() {
-        System.out.println("Close");
         closed.set(true);
+        silentClose(channel);
         silentClose(in);
         silentClose(out);
         silentClose(err);
         disposable.dispose();
+    }
+
+    public Flowable<NotificationPacket> notifications() {
+        return receive(NotificationPacket.class);
     }
 
     /**
@@ -122,14 +134,18 @@ public class Rpc implements Closeable {
         return incoming;
     }
 
+    public <T extends Packet> Flowable<T> receive(Class<T> type) {
+        return receive()
+            .filter(p -> type.isAssignableFrom(p.getClass()))
+            .cast(type);
+    }
+
     /**
      * Get a Single of the Packet type you specify matching your
      *  provided Predicate
      */
     public <T extends Packet> Single<T> receiveOne(Class<T> type, Predicate<T> filter) {
-        return receive()
-            .filter(p -> type.isAssignableFrom(p.getClass()))
-            .cast(type)
+        return receive(type)
             .filter(filter)
             .singleOrError();
     }
@@ -233,12 +249,21 @@ public class Rpc implements Closeable {
      * {@link #create(Channel)}
      */
     public static Rpc createEmbedded() {
-        return create(new EmbedChannel());
+        return create(new FallbackChannel(
+            // specific choices first to work in intellij sandbox
+            new EmbedChannel(Collections.singletonList("/usr/local/bin/nvim")),
+
+            // default args last
+            new EmbedChannel()
+        ));
     }
     public static Rpc create(Channel channel) {
-        InputStream in = channel.getInputStream();
-        OutputStream out = channel.getOutputStream();
-        InputStream err = channel.getErrorStream();
-        return new Rpc(in, out, err);
+        try {
+            channel.tryOpen();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unable to open channel", e);
+        }
+
+        return new Rpc(channel);
     }
 }
