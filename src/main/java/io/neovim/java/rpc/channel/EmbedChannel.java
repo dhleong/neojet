@@ -50,19 +50,19 @@ public class EmbedChannel implements Rpc.Channel {
         }
     }
 
+    /**
+     * Waits for the process to exit, but does NOT
+     *  explicitly terminate it directly.
+     */
     @Override
     public void close() {
         Process process = this.process;
         if (process != null) {
             try {
-                process.getInputStream().close();
-                process.getErrorStream().close();
-                process.getOutputStream().close();
-            } catch (IOException e) {
-                // ignore
+                process.waitFor();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
-
-            process.destroy();
         }
         this.process = null;
     }

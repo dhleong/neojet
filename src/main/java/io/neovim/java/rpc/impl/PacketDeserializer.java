@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.JsonTokenId;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.Packet;
 import io.neovim.java.rpc.RequestPacket;
@@ -42,7 +43,7 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
     static Packet readNotification(JsonParser p) throws IOException {
         return NotificationPacket.create(
             /* event = */ nextString(p),
-            /*  args = */ nextValue(p)
+            /*  args = */ nextValue(p, JsonNode.class)
         );
     }
 
@@ -83,11 +84,14 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
     }
 
     static Object nextValue(JsonParser p) throws IOException {
+        return nextValue(p, Object.class);
+    }
+    static <T> T nextValue(JsonParser p, Class<T> type) throws IOException {
         JsonToken tok = p.nextValue();
         if (tok.id() == JsonTokenId.ID_END_ARRAY) {
             return null;
         }
-        return p.readValueAs(Object.class);
+        return p.readValueAs(type);
     }
 
 }

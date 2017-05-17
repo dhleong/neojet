@@ -71,7 +71,7 @@ class NJCore : ApplicationComponent {
                 val width = 90
                 val height = 24
                 logger.info("attach: $width, $height")
-                nvim.uiAttach(width, height, 256)
+                nvim.uiAttach(width, height, true)
             }
 
             return nvim

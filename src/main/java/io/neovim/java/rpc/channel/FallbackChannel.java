@@ -55,7 +55,7 @@ public class FallbackChannel implements Rpc.Channel {
         Throwable lastError = null;
         for (Rpc.Channel choice : choices) {
             try {
-                choice.getInputStream();
+                choice.tryOpen();
                 return this.chosen = choice;
             } catch (Throwable e) {
                 // nope

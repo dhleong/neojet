@@ -39,6 +39,15 @@ public class ResponsePacket extends Packet {
         return result1;
     }
 
+    @Override
+    public String toString() {
+        return "ResponsePacket{" +
+            "requestId=" + requestId +
+            ", error=" + error +
+            ", result=" + result +
+            '}';
+    }
+
     public static ResponsePacket create(int requestId, Object error, Object result) {
         ResponsePacket packet = new ResponsePacket();
         packet.requestId = requestId;

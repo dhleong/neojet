@@ -1,11 +1,13 @@
 package io.neovim.java.rpc;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * @author dhleong
  */
 public class NotificationPacket extends Packet {
     public String event;
-    public Object args;
+    public JsonNode args;
 
     private NotificationPacket() {
         type = Type.NOTIFICATION;
@@ -31,8 +33,15 @@ public class NotificationPacket extends Packet {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "NotificationPacket{" +
+            "event='" + event + '\'' +
+            ", args=" + args +
+            '}';
+    }
 
-    public static NotificationPacket create(String event, Object args) {
+    public static NotificationPacket create(String event, JsonNode args) {
         NotificationPacket p = new NotificationPacket();
         p.event = event;
         p.args = args;

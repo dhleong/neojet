@@ -1,5 +1,6 @@
 package io.neovim.java.rpc;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Test;
 import org.msgpack.core.MessageBufferPacker;
@@ -38,14 +39,14 @@ public class PacketTest {
             .hasType(Packet.Type.NOTIFICATION);
         assertThat((NotificationPacket) packet)
             .hasEvent("takeoff")
-            .hasArgs(Arrays.asList(12, 34));
+            .hasArgs(fromJson("[12, 34]"));
     }
 
     @Test
     public void writeNotification() throws IOException {
         NotificationPacket notif = NotificationPacket.create(
             "landing",
-            Arrays.asList(42, 9001)
+            fromJson("[42, 9001]")
         );
 
         MessageBufferPacker pack = MessagePack.newDefaultBufferPacker();
@@ -100,18 +101,22 @@ public class PacketTest {
     }
 
     @Test
-    public void reciprocalTest_notification() throws IOException {
-        NotificationPacket notif = NotificationPacket.create(
+    public void reciprocalTest_request() throws IOException {
+        RequestPacket original = RequestPacket.create(
             "landing",
             Arrays.asList(42, 9001)
         );
 
         ObjectMapper mapper = NeovimObjectMapper.newInstance();
-        byte[] bytes = mapper.writeValueAsBytes(notif);
+        byte[] bytes = mapper.writeValueAsBytes(original);
         Packet restored = mapper.readValue(bytes, Packet.class);
 
         assertThat(restored)
-            .isInstanceOf(NotificationPacket.class)
-            .isEqualTo(notif);
+            .isInstanceOf(RequestPacket.class)
+            .isEqualTo(original);
+    }
+
+    static JsonNode fromJson(String json) throws IOException {
+        return new ObjectMapper().readTree(json);
     }
 }

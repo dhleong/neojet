@@ -40,6 +40,15 @@ public class RequestPacket extends Packet {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "RequestPacket{" +
+            "requestId=" + requestId +
+            ", method='" + method + '\'' +
+            ", args=" + args +
+            '}';
+    }
+
     public static RequestPacket create(String method) {
         return create(method, Collections.emptyList());
     }

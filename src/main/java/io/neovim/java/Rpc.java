@@ -1,6 +1,5 @@
 package io.neovim.java;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.rpc.NeovimObjectMapper;
 import io.neovim.java.rpc.NotificationPacket;
@@ -26,7 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Collections;
-import java.util.Iterator;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,6 +38,11 @@ public class Rpc implements Closeable {
     private static final long TIMEOUT = 5;
     private static final TimeUnit TIMEOUT_UNIT = TimeUnit.SECONDS;
 
+    /**
+     * NOTE: Calling {@link #close()} does NOT
+     * necessarily close the streams; clients who
+     * use them are responsible for closing them.
+     */
     public interface Channel extends Closeable {
         void tryOpen() throws Exception;
 
@@ -56,8 +60,11 @@ public class Rpc implements Closeable {
     final ObjectMapper mapper;
 
     final AtomicBoolean closed = new AtomicBoolean(false);
+    final AtomicBoolean reading = new AtomicBoolean(false);
     final AtomicInteger nextId = new AtomicInteger(0);
     final CompositeDisposable disposable = new CompositeDisposable();
+    final CountDownLatch openingLatch = new CountDownLatch(1);
+    final CountDownLatch closingLatch = new CountDownLatch(2);
 
     final UnicastProcessor<Packet> outgoing = UnicastProcessor.create();
     final Flowable<Packet> incoming;
@@ -71,17 +78,30 @@ public class Rpc implements Closeable {
         mapper = NeovimObjectMapper.newInstance();
 
         incoming = observeIncoming()
-            .publish()
-            .autoConnect()
-            .subscribeOn(Schedulers.newThread());
+            .subscribeOn(Schedulers.newThread())
+            .share();
 
         // internal subscriptions
         subscribe();
+
+//        try {
+//            openingLatch.await();
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Override
     public void close() {
+        // ensure any queued packets are sent
+        outgoing.onComplete();
         closed.set(true);
+        try {
+            closingLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         silentClose(channel);
         silentClose(in);
         silentClose(out);
@@ -147,7 +167,7 @@ public class Rpc implements Closeable {
     public <T extends Packet> Single<T> receiveOne(Class<T> type, Predicate<T> filter) {
         return receive(type)
             .filter(filter)
-            .singleOrError();
+            .firstOrError();
     }
 
     private int assignRequestId() {
@@ -170,7 +190,14 @@ public class Rpc implements Closeable {
                 .subscribe(err -> {
                     // TODO ?
                     System.err.println("nvim Error: " + err);
-                })
+                }),
+
+            // subscribe ourselves to make sure stdin is consumed
+            incoming.subscribe(packet -> {
+                // ignore
+            }, e -> {
+                // ignore
+            })
         );
     }
 
@@ -192,32 +219,40 @@ public class Rpc implements Closeable {
 
     private Flowable<Packet> observeIncoming() {
         return Flowable.create(emitter -> {
-            JsonParser parser = mapper.getFactory().createParser(in);
+            if (reading.getAndSet(true)) {
+                System.err.println("observeIncoming" + emitter.getClass() + "@" + emitter.hashCode());
+                emitter.onError(
+                    new IllegalStateException("Multiple readers")
+                );
+                return;
+            }
+
             try {
-                Iterator<Packet> packets = parser.readValuesAs(Packet.class);
-                while (!closed.get() && packets.hasNext()) {
-                    Packet read = packets.next();
+                openingLatch.countDown();
+                while (!closed.get()) {
+                    Packet read = mapper.readValue(in, Packet.class);
+                    if (read == null) break;
 
                     if (emitter.requested() > 0) {
                         emitter.onNext(read);
                     }
+                }
 
-                    // don't pin the CPU
-                    Thread.sleep(1);
-                }
             } catch (IOException e) {
-                if (!closed.get()) {
-                    onIOException(e);
-                }
+                closingLatch.countDown();
+                emitter.onError(e);
+                return;
             }
 
             emitter.onComplete();
+            closingLatch.countDown();
 
         }, BackpressureStrategy.BUFFER);
     }
 
     private Disposable subscribeOutgoing() {
         return outgoing.observeOn(Schedulers.io())
+            .doOnComplete(closingLatch::countDown)
             .subscribe(packet -> {
                 try {
                     mapper.writeValue(out, packet);
