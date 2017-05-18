@@ -12,11 +12,18 @@ import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author dhleong
  */
 public class PacketDeserializer extends JsonDeserializer<Packet> {
+    private Map<Integer, Class<?>> requestedTypes;
+
+    public PacketDeserializer(Map<Integer, Class<?>> requestedTypes) {
+        this.requestedTypes = requestedTypes;
+    }
+
     @Override
     public Packet deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
         expect(p, JsonTokenId.ID_NUMBER_INT);
@@ -55,11 +62,21 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
         );
     }
 
-    static Packet readResponse(JsonParser p) throws IOException {
+    Packet readResponse(JsonParser p) throws IOException {
+        final int requestId = nextInt(p);
+        final Object error = nextValue(p);
+        final Object result;
+        final Class<?> desiredType = this.requestedTypes.remove(requestId);
+        if (desiredType == null) {
+            result = nextValue(p);
+        } else {
+            result = nextValue(p, desiredType);
+        }
+
         return ResponsePacket.create(
-            /* requestId = */ nextInt(p),
-            /*     error = */ nextValue(p),
-            /*    result = */ nextValue(p)
+            requestId,
+            error,
+            result
         );
     }
 

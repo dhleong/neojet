@@ -45,8 +45,9 @@ public class Neovim implements Closeable {
     /**
      * Execute a single ex command and get the output
      */
-    public Single<ResponsePacket> commandOutput(String command) {
+    public Single<String> commandOutput(String command) {
         return rpc.request(
+            String.class,
             RequestPacket.create(
                 "nvim_command_output",
                 command

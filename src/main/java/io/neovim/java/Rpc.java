@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -68,6 +69,8 @@ public class Rpc implements Closeable {
 
     final UnicastProcessor<Packet> outgoing = UnicastProcessor.create();
     final Flowable<Packet> incoming;
+    final ConcurrentHashMap<Integer, Class<?>> requestedTypes =
+        new ConcurrentHashMap<>();
 
     private Rpc(@Nonnull Channel channel) {
         this.channel = channel;
@@ -75,7 +78,7 @@ public class Rpc implements Closeable {
         out = channel.getOutputStream();
         err = channel.getErrorStream();
 
-        mapper = NeovimObjectMapper.newInstance();
+        mapper = NeovimObjectMapper.newInstance(requestedTypes);
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())
@@ -124,6 +127,32 @@ public class Rpc implements Closeable {
             ResponsePacket.class,
             packet -> id == packet.requestId
         ).timeout(TIMEOUT, TIMEOUT_UNIT);
+    }
+
+    /**
+     * Perform a request with the given RequestPacket,
+     * returning a Single that emits the response value,
+     * coerced to the given type, or times out after
+     * TIMEOUT seconds.
+     */
+    public <T> Single<T> request(Class<T> responseValueType, RequestPacket request) {
+        int id = sendRequest(request);
+        requestedTypes.put(id, responseValueType);
+        return receiveOne(
+            ResponsePacket.class,
+            packet -> id == packet.requestId
+        ).timeout(TIMEOUT, TIMEOUT_UNIT)
+         .flatMap(responsePacket -> {
+             if (responsePacket.error != null) {
+                 // TODO NeovimException?
+                 return Single.error(new Exception(
+                     responsePacket.error.toString()
+                 ));
+             }
+
+             //noinspection unchecked
+             return Single.just((T) responsePacket.result);
+         });
     }
 
     /**

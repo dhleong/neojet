@@ -48,13 +48,14 @@ public class NeovimTest {
 
     @Test
     public void uiAttach() {
-        System.out.println("<< uiAttach");
         nvim.uiAttach(90, 24, true);
-        System.out.println("   uiAttach >>");
         nvim.command("e ~/.bash_profile");
-        System.out.println("   output >>");
-        nvim.commandOutput("echo \"test\"").blockingGet();
-        System.out.println("   command >>");
+
+        assertThat(
+            nvim.commandOutput("echo \"test\"")
+                .blockingGet()
+        ).isEqualTo("\ntest");
+
         NotificationPacket packet = nvim.notifications("redraw")
             .timeout(5, TimeUnit.SECONDS)
             .firstOrError()
