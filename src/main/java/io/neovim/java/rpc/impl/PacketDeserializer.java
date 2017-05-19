@@ -1,7 +1,6 @@
 package io.neovim.java.rpc.impl;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.JsonTokenId;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -13,6 +12,10 @@ import io.neovim.java.rpc.ResponsePacket;
 
 import java.io.IOException;
 import java.util.Map;
+
+import static io.neovim.java.rpc.impl.JsonParserUtil.nextInt;
+import static io.neovim.java.rpc.impl.JsonParserUtil.nextString;
+import static io.neovim.java.rpc.impl.JsonParserUtil.nextValue;
 
 /**
  * @author dhleong
@@ -26,7 +29,7 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
 
     @Override
     public Packet deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        expect(p, JsonTokenId.ID_NUMBER_INT);
+        JsonParserUtil.expect(p, JsonTokenId.ID_NUMBER_INT);
 
         Packet.Type type = Packet.Type.create(p.getIntValue());
         final Packet packet;
@@ -78,37 +81,6 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
             error,
             result
         );
-    }
-
-    static JsonToken expect(JsonParser p, int type) throws IOException {
-        JsonToken tok = p.nextToken();
-        if (tok.id() != type) {
-            throw new IllegalStateException(
-                "Expected "  + type + " but was " + tok.id());
-        }
-
-        return tok;
-    }
-
-    static int nextInt(JsonParser p) throws IOException {
-        p.nextValue();
-        return p.getValueAsInt();
-    }
-
-    static String nextString(JsonParser p) throws IOException {
-        p.nextValue();
-        return p.getValueAsString();
-    }
-
-    static Object nextValue(JsonParser p) throws IOException {
-        return nextValue(p, Object.class);
-    }
-    static <T> T nextValue(JsonParser p, Class<T> type) throws IOException {
-        JsonToken tok = p.nextValue();
-        if (tok.id() == JsonTokenId.ID_END_ARRAY) {
-            return null;
-        }
-        return p.readValueAs(type);
     }
 
 }

@@ -78,7 +78,7 @@ public class Rpc implements Closeable {
         out = channel.getOutputStream();
         err = channel.getErrorStream();
 
-        mapper = NeovimObjectMapper.newInstance(requestedTypes);
+        mapper = NeovimObjectMapper.newInstance(this, requestedTypes);
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())

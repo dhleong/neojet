@@ -31,11 +31,6 @@ public class NeovimTest {
     }
 
     @Test
-    public void empty() {
-        // just a simple setup and tearDown test
-    }
-
-    @Test
     public void getApiInfo() {
         ResponsePacket packet =
             nvim.getApiInfo()

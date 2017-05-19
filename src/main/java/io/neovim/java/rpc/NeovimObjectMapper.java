@@ -3,8 +3,9 @@ package io.neovim.java.rpc;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import io.neovim.java.rpc.impl.PacketDeserializer;
+import io.neovim.java.Rpc;
+import io.neovim.java.rpc.impl.NeovimExtensionTypes;
+import io.neovim.java.rpc.impl.NeovimMapperModule;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import java.util.Collections;
@@ -19,20 +20,23 @@ public class NeovimObjectMapper {
     }
 
     public static ObjectMapper newInstance() {
-        return newInstance(Collections.emptyMap());
+        return newInstance(null, Collections.emptyMap());
     }
 
-    public static ObjectMapper newInstance(Map<Integer, Class<?>> requestedTypes) {
+    public static ObjectMapper newInstance(Rpc rpc, Map<Integer, Class<?>> requestedTypes) {
+        NeovimMapperModule module = new NeovimMapperModule(rpc, requestedTypes);
+
         MessagePackFactory factory = new MessagePackFactory();
         factory.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
         factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-
-        SimpleModule packetModule = new SimpleModule();
-        packetModule.addDeserializer(Packet.class,
-            new PacketDeserializer(requestedTypes));
+        factory.setExtTypeCustomDesers(
+            NeovimExtensionTypes.getInstance()
+                .getExtensionDeserializers(factory, module)
+        );
 
         ObjectMapper mapper = new ObjectMapper(factory);
-        mapper.registerModule(packetModule);
+        mapper.registerModule(module);
         return mapper;
     }
+
 }

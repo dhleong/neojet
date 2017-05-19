@@ -101,7 +101,7 @@ public class PacketTest {
     }
 
     @Test
-    public void reciprocalTest_request() throws IOException {
+    public void symmetrical_RequestPacket() throws IOException {
         RequestPacket original = RequestPacket.create(
             "landing",
             Arrays.asList(42, 9001)
