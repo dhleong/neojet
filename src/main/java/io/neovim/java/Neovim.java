@@ -3,6 +3,7 @@ package io.neovim.java;
 import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
+import io.neovim.java.rpc.channel.SocketChannel;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
 import org.msgpack.core.annotations.VisibleForTesting;
@@ -116,10 +117,28 @@ public class Neovim implements Closeable {
         rpc.sendRequest(RequestPacket.create("ui_detach"));
     }
 
+    /*
+     Factory methods
+     */
+
+    /**
+     * Create a Neovim session attached to an embedded Neovim
+     */
     public static Neovim attachEmbedded() {
         return attach(Rpc.createEmbedded());
     }
 
+    /**
+     * Create a Neovim session attached to a running Neovim
+     *   via a socket connection
+     */
+    public static Neovim attachSocket(String host, int port) {
+        return attach(Rpc.create(new SocketChannel(host, port)));
+    }
+
+    /**
+     * Create a Neovim session attached to the provided Rpc session
+     */
     public static Neovim attach(Rpc rpc) {
         return new Neovim(rpc);
     }
