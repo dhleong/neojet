@@ -1,0 +1,27 @@
+package io.neovim.java;
+
+import org.junit.After;
+import org.junit.Before;
+
+/**
+ * Base-class for integration tests that use a Neovim
+ *  connected to an embedded instance
+ *
+ * @author dhleong
+ */
+public abstract class EmbeddedNeovimTest {
+
+    protected Neovim nvim;
+    protected Rpc rpc;
+
+    @Before
+    public void setUp() throws Exception {
+        rpc = Rpc.createEmbedded();
+        nvim = Neovim.attach(rpc);
+    }
+
+    @After
+    public void tearDown() {
+        nvim.close();
+    }
+}

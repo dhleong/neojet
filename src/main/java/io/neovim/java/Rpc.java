@@ -150,6 +150,14 @@ public class Rpc implements Closeable {
                  ));
              }
 
+             if (responsePacket.result == null) {
+                 // NOTE: no error, but the result is nil;
+                 //  coerce that to TRUE, since rxjava2
+                 //  doesn't allow nil values
+                 //noinspection unchecked
+                 return Single.just((T) Boolean.TRUE);
+             }
+
              //noinspection unchecked
              return Single.just((T) responsePacket.result);
          });

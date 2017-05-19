@@ -2,9 +2,7 @@ package io.neovim.java.rpc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.Buffer;
-import io.neovim.java.Neovim;
-import io.neovim.java.Rpc;
-import org.junit.After;
+import io.neovim.java.EmbeddedNeovimTest;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -16,21 +14,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author dhleong
  */
-public class RemoteObjectTest {
-    Neovim nvim;
-    Rpc rpc;
+public class RemoteObjectTest extends EmbeddedNeovimTest {
 
     @Before
     public void setUp() throws Exception {
-        rpc = Rpc.createEmbedded();
-        nvim = Neovim.attach(rpc);
+        super.setUp();
+
         nvim.getApiInfo().blockingGet();
         nvim.command("e serenity.ship");
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        nvim.close();
     }
 
     @Test

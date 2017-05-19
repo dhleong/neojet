@@ -11,7 +11,8 @@ public abstract class RemoteObject {
 
     public final long id;
 
-    private final Rpc rpc;
+    final Rpc rpc;
+
     private final String apiPrefix;
     private final Long idObject; // to avoid boxing
 
