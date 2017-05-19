@@ -2,6 +2,8 @@ package io.neovim.java.rpc.impl;
 
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import io.neovim.java.Buffer;
+import io.neovim.java.Tabpage;
+import io.neovim.java.Window;
 import org.msgpack.jackson.dataformat.ExtensionTypeCustomDeserializers;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
@@ -21,7 +23,8 @@ public class NeovimExtensionTypes {
     private NeovimExtensionTypes() {
         // default values:
         types.put(Buffer.class, (byte) 0);
-        // TODO Window, Tabpage
+        types.put(Window.class, (byte) 1);
+        types.put(Tabpage.class, (byte) 2);
     }
 
     public byte getTypeIdOf(Class<? extends RemoteObject> type) {

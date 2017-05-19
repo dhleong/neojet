@@ -31,4 +31,26 @@ public class CurrentObjectsTest {
         assertThat(b.name().blockingGet())
             .endsWith("/serenity.ship");
     }
+
+    @Test
+    public void getWindow() {
+        Window w = nvim.current.window().blockingGet();
+        assertThat(w).isNotNull();
+
+        Buffer actualBuf = nvim.current.buffer().blockingGet();
+        Buffer windowBuf = w.buffer().blockingGet();
+        assertThat(windowBuf)
+            .isEqualTo(actualBuf);
+    }
+
+    @Test
+    public void getTabpage() {
+        Tabpage t = nvim.current.tabpage().blockingGet();
+        assertThat(t).isNotNull();
+
+        Window actualWin = nvim.current.window().blockingGet();
+        Window tabpageWin = t.window().blockingGet();
+        assertThat(tabpageWin)
+            .isEqualTo(actualWin);
+    }
 }

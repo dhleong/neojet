@@ -13,10 +13,6 @@ public class Buffer extends RemoteObject {
         super(rpc, API_PREFIX, id);
     }
 
-    public Single<Boolean> isValid() {
-        return request(Boolean.class, "nvim_buf_is_valid");
-    }
-
     public Single<String> name() {
         return request(String.class, "nvim_buf_get_name");
     }

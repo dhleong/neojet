@@ -44,6 +44,10 @@ public abstract class RemoteObject {
             '}';
     }
 
+    public Single<Boolean> isValid() {
+        return request(Boolean.class, apiPrefix + "is_valid");
+    }
+
     protected <T> Single<T> request(Class<T> responseValueType,
                                     String method, Object... args) {
         Object[] actualArgs = new Object[args.length + 1];
