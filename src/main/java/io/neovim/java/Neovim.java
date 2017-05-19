@@ -6,7 +6,6 @@ import io.neovim.java.rpc.ResponsePacket;
 import io.neovim.java.rpc.channel.SocketChannel;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
-import org.msgpack.core.annotations.VisibleForTesting;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
@@ -18,8 +17,7 @@ public class Neovim implements Closeable {
 
     public final CurrentObjects current;
 
-    @VisibleForTesting
-    public final Rpc rpc;
+    final Rpc rpc;
 
     private boolean hasQuit;
 

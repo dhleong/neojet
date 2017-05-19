@@ -3,6 +3,7 @@ package io.neovim.java.rpc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.Buffer;
 import io.neovim.java.Neovim;
+import io.neovim.java.Rpc;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,10 +18,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class RemoteObjectTest {
     Neovim nvim;
+    Rpc rpc;
 
     @Before
     public void setUp() throws Exception {
-        nvim = Neovim.attachEmbedded();
+        rpc = Rpc.createEmbedded();
+        nvim = Neovim.attach(rpc);
         nvim.getApiInfo().blockingGet();
         nvim.command("e serenity.ship");
     }
@@ -35,7 +38,7 @@ public class RemoteObjectTest {
         Buffer b = nvim.current.buffer().blockingGet();
 
         ObjectMapper mapper =
-            NeovimObjectMapper.newInstance(nvim.rpc, Collections.emptyMap());
+            NeovimObjectMapper.newInstance(rpc, Collections.emptyMap());
 
         byte[] bytes = mapper.writeValueAsBytes(b);
 
