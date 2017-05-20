@@ -12,7 +12,7 @@ public class CurrentObjectsTest extends EmbeddedNeovimTest {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        nvim.command("e serenity.ship");
+        nvimCommand("e serenity.ship");
     }
 
     @Test

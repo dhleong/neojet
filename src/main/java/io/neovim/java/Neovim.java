@@ -7,6 +7,7 @@ import io.neovim.java.rpc.channel.SocketChannel;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.io.Closeable;
 
@@ -38,8 +39,10 @@ public class Neovim implements Closeable {
     /**
      * Execute a single ex command
      */
-    public Single<ResponsePacket> command(String command) {
+    @CheckReturnValue
+    public Single<Boolean> command(String command) {
         return rpc.request(
+            Boolean.class,
             RequestPacket.create(
                 "nvim_command",
                 command
@@ -50,6 +53,7 @@ public class Neovim implements Closeable {
     /**
      * Execute a single ex command and get the output
      */
+    @CheckReturnValue
     public Single<String> commandOutput(String command) {
         return rpc.request(
             String.class,
@@ -99,8 +103,10 @@ public class Neovim implements Closeable {
     /**
      * Register as a remote UI
      */
-    public void uiAttach(int width, int height, boolean rgb) {
-        rpc.sendRequest(
+    @CheckReturnValue
+    public Single<Boolean> uiAttach(int width, int height, boolean rgb) {
+        return rpc.request(
+            Boolean.class,
             RequestPacket.create(
                 "ui_attach",
                 width, height, rgb
@@ -111,8 +117,12 @@ public class Neovim implements Closeable {
     /**
      * Unregister as remote UI
      */
-    public void uiDetach() {
-        rpc.sendRequest(RequestPacket.create("ui_detach"));
+    @CheckReturnValue
+    public Single<Boolean> uiDetach() {
+        return rpc.request(
+            Boolean.class,
+            RequestPacket.create("ui_detach")
+        );
     }
 
     /*

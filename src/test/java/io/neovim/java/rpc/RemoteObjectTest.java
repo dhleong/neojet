@@ -21,7 +21,7 @@ public class RemoteObjectTest extends EmbeddedNeovimTest {
         super.setUp();
 
         nvim.getApiInfo().blockingGet();
-        nvim.command("e serenity.ship");
+        nvimCommand("e serenity.ship");
     }
 
     @Test

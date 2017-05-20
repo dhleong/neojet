@@ -64,7 +64,6 @@ public class Rpc implements Closeable {
     final AtomicBoolean reading = new AtomicBoolean(false);
     final AtomicInteger nextId = new AtomicInteger(0);
     final CompositeDisposable disposable = new CompositeDisposable();
-    final CountDownLatch openingLatch = new CountDownLatch(1);
     final CountDownLatch closingLatch = new CountDownLatch(2);
 
     final UnicastProcessor<Packet> outgoing = UnicastProcessor.create();
@@ -82,16 +81,11 @@ public class Rpc implements Closeable {
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())
-            .share();
+            .replay(1, TimeUnit.SECONDS)
+            .refCount();
 
         // internal subscriptions
         subscribe();
-
-//        try {
-//            openingLatch.await();
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Override
@@ -265,7 +259,6 @@ public class Rpc implements Closeable {
             }
 
             try {
-                openingLatch.countDown();
                 while (!closed.get()) {
                     Packet read = mapper.readValue(in, Packet.class);
                     if (read == null) break;

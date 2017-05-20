@@ -29,7 +29,7 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
 
     @Override
     public Packet deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
-        JsonParserUtil.expect(p, JsonTokenId.ID_NUMBER_INT);
+        JsonParserUtil.expectNext(p, JsonTokenId.ID_NUMBER_INT);
 
         Packet.Type type = Packet.Type.create(p.getIntValue());
         final Packet packet;

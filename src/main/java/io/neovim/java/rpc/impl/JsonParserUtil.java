@@ -11,12 +11,18 @@ import java.io.IOException;
  */
 public class JsonParserUtil {
     static JsonToken expect(JsonParser p, int type) throws IOException {
-        JsonToken tok = p.nextToken();
+        JsonToken tok = p.getCurrentToken();
         if (tok.id() != type) {
             throw new IllegalStateException(
                 "Expected "  + type + " but was " + tok.id());
         }
 
+        return tok;
+    }
+
+    static JsonToken expectNext(JsonParser p, int type) throws IOException {
+        JsonToken tok = p.nextToken();
+        expect(p, type);
         return tok;
     }
 

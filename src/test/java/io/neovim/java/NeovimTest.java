@@ -29,8 +29,11 @@ public class NeovimTest extends EmbeddedNeovimTest {
 
     @Test
     public void uiAttach() {
-        nvim.uiAttach(90, 24, true);
-        nvim.command("e ~/.bash_profile");
+        assertThat(
+            nvim.uiAttach(90, 24, true)
+                .blockingGet()
+        ).isTrue();
+        nvimCommand("e ~/.bash_profile");
 
         assertThat(
             nvim.commandOutput("echo \"test\"")

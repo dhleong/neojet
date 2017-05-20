@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.neovim.java.Buffer;
+import io.neovim.java.IntPair;
 import io.neovim.java.Rpc;
 import io.neovim.java.Tabpage;
 import io.neovim.java.Window;
@@ -23,6 +24,8 @@ public class NeovimMapperModule extends SimpleModule {
 
         addDeserializer(Packet.class,
             new PacketDeserializer(requestedTypes));
+        addDeserializer(IntPair.class,
+            new IntPairDeserializer());
 
         defineRemoteObject(Buffer.class, Buffer::new);
         defineRemoteObject(Window.class, Window::new);
