@@ -3,7 +3,7 @@ package io.neovim.java;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static io.neovim.java.NeovimAssertions.assertThat;
 
 /**
  * @author dhleong
@@ -36,18 +36,19 @@ public class WindowTest extends EmbeddedNeovimTest {
 
     @Test
     public void getCursor() {
-        // FIXME IntPairAssert object
         IntPair oldCursor = window.cursor().blockingGet();
-        assertThat(oldCursor.row()).isEqualTo(1);
-        assertThat(oldCursor.col()).isEqualTo(0);
+        assertThat(oldCursor)
+            .hasFirst(1)
+            .hasSecond(0);
 
         assertThat(
             nvim.command("exe 'go ' . (line2byte(2) + 3)").blockingGet()
         ).isTrue();
 
         IntPair newCursor = window.cursor().blockingGet();
-        assertThat(newCursor.row()).isEqualTo(2);
-        assertThat(newCursor.col()).isEqualTo(3);
+        assertThat(newCursor)
+            .hasFirst(2)
+            .hasSecond(3);
     }
 
     @Test
@@ -55,7 +56,8 @@ public class WindowTest extends EmbeddedNeovimTest {
         window.setCursor(3, 4).blockingGet();
 
         IntPair newCursor = window.cursor().blockingGet();
-        assertThat(newCursor.row()).isEqualTo(3);
-        assertThat(newCursor.col()).isEqualTo(4);
+        assertThat(newCursor)
+            .hasFirst(3)
+            .hasSecond(4);
     }
 }

@@ -44,7 +44,7 @@ public class PacketTest {
 
     @Test
     public void writeNotification() throws IOException {
-        NotificationPacket notif = NotificationPacket.create(
+        NotificationPacket<JsonNode> notif = NotificationPacket.create(
             "landing",
             fromJson("[42, 9001]")
         );

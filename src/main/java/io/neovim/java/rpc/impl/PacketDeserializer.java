@@ -51,9 +51,14 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
     }
 
     static Packet readNotification(JsonParser p) throws IOException {
+        String event = nextString(p);
+        NotificationType type = NotificationType.fromString(event);
+        Class<?> valueType = type == null
+            ? JsonNode.class
+            : type.valueType;
         return NotificationPacket.create(
-            /* event = */ nextString(p),
-            /*  args = */ nextValue(p, JsonNode.class)
+            /* event = */ event,
+            /*  args = */ nextValue(p, valueType)
         );
     }
 

@@ -1,6 +1,6 @@
 package io.neovim.java;
 
-import io.neovim.java.rpc.NotificationPacket;
+import com.fasterxml.jackson.databind.JsonNode;
 import io.neovim.java.rpc.ResponsePacket;
 import org.junit.Test;
 
@@ -40,12 +40,11 @@ public class NeovimTest extends EmbeddedNeovimTest {
                 .blockingGet()
         ).isEqualTo("\ntest");
 
-        NotificationPacket packet = nvim.notifications("redraw")
+        JsonNode node = nvim.<JsonNode>notifications("redraw")
             .timeout(5, TimeUnit.SECONDS)
             .firstOrError()
             .blockingGet();
-        assertThat(packet)
-            .isNotNull()
-            .hasEvent("redraw");
+        assertThat(node)
+            .isNotNull();
     }
 }

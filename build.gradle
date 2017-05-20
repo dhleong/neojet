@@ -10,7 +10,7 @@ buildscript {
 
 plugins {
     id 'org.jetbrains.intellij' version '0.2.0'
-//    id 'com.github.opengl-BOBO.assertjGen' version '1.1.3'
+    id 'com.github.opengl-BOBO.assertjGen' version '1.1.3'
 }
 
 apply plugin: 'java'
@@ -60,12 +60,13 @@ sourceSets {
 }
 
 // NOTE: this barfs on the JsonNode class right now....
-//assertjGen {
-//    // specify target class or package names by array.
-//    classOrPackageNames = [
-//            'io.neovim.java.rpc.Packet',
-//            'io.neovim.java.rpc.NotificationPacket',
-//            'io.neovim.java.rpc.ResponsePacket',
-//            'io.neovim.java.rpc.RequestPacket',
-//    ]
-//}
+assertjGen {
+    // specify target class or package names by array.
+    classOrPackageNames = [
+            'io.neovim.java.rpc.Packet',
+            'io.neovim.java.rpc.NotificationPacket',
+            'io.neovim.java.rpc.ResponsePacket',
+            'io.neovim.java.rpc.RequestPacket',
+            'io.neovim.java.IntPair',
+    ]
+}

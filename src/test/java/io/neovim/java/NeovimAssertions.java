@@ -14,6 +14,11 @@ import org.assertj.core.api.Assertions;
  * @author dhleong
  */
 public class NeovimAssertions extends Assertions {
+
+    public static IntPairAssert assertThat(IntPair actual) {
+        return new IntPairAssert(actual);
+    }
+
     public static PacketAssert assertThat(Packet actual) {
         return new PacketAssert(actual);
     }

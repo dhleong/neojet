@@ -79,11 +79,19 @@ public class Neovim implements Closeable {
     }
 
     /**
-     * @return A Flowable of every NotificationPacket with the specified eventType
+     * NOTE: The generics on this method are a convenience,
+     *  not a guarantee. The actual type of the args is
+     *  determined by the {@link io.neovim.java.rpc.impl.NotificationType}
+     *
+     *
+     * @return A Flowable of the args to every NotificationPacket
+     *  with the specified eventType
      */
-    public Flowable<NotificationPacket> notifications(@Nonnull String eventType) {
+    public <T> Flowable<T> notifications(@Nonnull String eventType) {
+        //noinspection unchecked
         return notifications()
-            .filter(notif -> eventType.equals(notif.event));
+            .filter(notif -> eventType.equals(notif.event))
+            .map(notif -> (T) notif.args);
     }
 
     public void quit() {
