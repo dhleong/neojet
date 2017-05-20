@@ -64,6 +64,48 @@ public class Neovim implements Closeable {
         );
     }
 
+    /**
+     * Push `keys` to Nvim user input buffer.
+     from a mapping. This matters for undo, opening folds, etc.
+     * @param keys A string of keys
+     * @param options A string with the following character flags:
+     *  - 'm': Remap keys. This is default.
+     *  - 'n': Do not remap keys.
+     *  - 't': Handle keys as if typed; otherwise they are handled as if coming
+     *         from a mapping. This matters for undo, opening folds, etc.
+     */
+    public Single<Boolean> feedKeys(String keys, String options) {
+        return feedKeys(keys, options, true);
+    }
+    /** @see #feedKeys(String, String) */
+    public Single<Boolean> feedKeys(String keys, String options, boolean escapeCSI) {
+        return rpc.request(
+            Boolean.class,
+            RequestPacket.create(
+                "nvim_feedkeys",
+                keys, options, escapeCSI
+            )
+        );
+    }
+
+    /**
+     * Push `bytes` to Nvim low level input buffer.
+     *
+     * Unlike `feedkeys()`, this uses the lowest level input buffer and the
+     * call is not deferred.
+     * @return the number of bytes actually written (which can be less than
+     *  what was requested if the buffer is full).
+     */
+    public Single<Integer> input(String bytes) {
+        return rpc.request(
+            Integer.class,
+            RequestPacket.create(
+                "nvim_input",
+                bytes
+            )
+        );
+    }
+
     public Single<ResponsePacket> getApiInfo() {
         return rpc.request(
             RequestPacket.create("vim_get_api_info")
