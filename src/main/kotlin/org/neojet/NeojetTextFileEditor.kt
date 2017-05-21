@@ -5,12 +5,16 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.*
 import com.intellij.openapi.fileEditor.impl.FileEditorProviderManagerImpl
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.pom.Navigatable
+import io.neovim.java.Buffer
+import org.neojet.gui.NeojetEditorPanel
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 
+val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
 
 /**
  * @author dhleong
@@ -20,6 +24,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
 
     val editor: TextEditor = createEditor(project, vFile)
     val nvim = NJCore.instance.attach(this)
+    val panel = NeojetEditorPanel(getUserData(NVIM_BUFFER_KEY)!!)
 
     override fun getEditor(): Editor {
         return editor.editor
@@ -34,7 +39,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun getComponent(): JComponent {
-        return editor.component
+        return panel
     }
 
     override fun getPreferredFocusedComponent(): JComponent? {
@@ -82,7 +87,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun dispose() {
-
+        panel.dispose()
     }
 
 }

@@ -31,9 +31,13 @@ class NJCore : ApplicationComponent {
     override fun disposeComponent() {
         nvim?.close()
         nvim = null
+
+//        TypedActionFacade.Instance.restoreHandler()
     }
 
     override fun initComponent() {
+//        Traceur.enableLogging()
+
         try {
             nvim = Neovim.attachEmbedded()
         } catch (e: Throwable) {
@@ -43,14 +47,23 @@ class NJCore : ApplicationComponent {
             return
         }
 
+//        TypedActionFacade.Instance.installHandler({ original ->
+//            NeovimTypedActionHandler(original)
+//        })
+
 //        EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
 //            override fun editorReleased(event: EditorFactoryEvent) {
 //                TODO("not implemented")
 //            }
 //
 //            override fun editorCreated(event: EditorFactoryEvent) {
-//                event.editor.
-//                TODO("not implemented")
+//                event.editor.component.addKeyListener(object : KeyAdapter() {
+//                    override fun keyTyped(e: KeyEvent?) {
+//                        e?.let {
+//                            System.out.println(it)
+//                        }
+//                    }
+//                })
 //            }
 //        })
     }
@@ -73,6 +86,10 @@ class NJCore : ApplicationComponent {
                 logger.info("attach: $width, $height")
                 nvim.uiAttach(width, height, true)
             }
+
+            val filePath = editor.vFile.path
+            nvim.command("e $filePath").blockingGet()
+            editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
 
             return nvim
         }

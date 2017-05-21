@@ -35,6 +35,7 @@ intellij {
 }
 
 repositories {
+    jcenter()
     mavenCentral()
 }
 
@@ -46,10 +47,11 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile "org.jetbrains.kotlin:kotlin-runtime:$kotlinVersion"
 
-//    compile 'com.neovim:neovim-java-client:0.0-SNAPSHOT'
     compile "org.msgpack:msgpack-core:${vs.msgpack}"
     compile "org.msgpack:jackson-dataformat-msgpack:${vs.msgpack}"
     compile 'io.reactivex.rxjava2:rxjava:2.1.0'
+
+//    compile 'com.tspoon.traceur:traceur:1.0.1'
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.7.0'
