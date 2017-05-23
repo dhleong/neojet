@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.neovim.java.event.Event;
+import io.neovim.java.event.EventName;
 import io.neovim.java.event.EventsManager;
 import io.neovim.java.event.impl.FakeArrayStartJsonParser;
 
@@ -22,20 +23,10 @@ import static io.neovim.java.rpc.impl.JsonParserUtil.nextString;
 
 /**
  * @author dhleong
+ * @param <T> Type of data transmitted by this class. If you don't
+ *            provide your own Deserializer, you MUST annotate it
+ *            with <code>@JsonFormat(shape = JsonFormat.Shape.ARRAY)</code>
  */
-//@JsonTypeInfo(
-//    use = JsonTypeInfo.Id.NAME,
-//    include = JsonTypeInfo.As.PROPERTY,
-//    property = "redrawType"
-////    defaultImpl = UnknownRedrawEvent.class
-////    defaultImpl = Void.class
-//)
-////@JsonTypeIdResolver(RedrawSubEvent.EventTypeIdResolver.class)
-//@JsonSubTypes({
-////    @JsonSubTypes.Type(name = "cursor_goto", value = CursorGotoEvent.class),
-//    @JsonSubTypes.Type(name = "put", value = PutEvent.class),
-//})
-//@JsonDeserialize(using = RedrawSubEvent.Deserializer.class)
 @JsonFormat(shape = JsonFormat.Shape.ARRAY)
 public abstract class RedrawSubEvent<T> implements Event<List<T>> {
 
@@ -65,7 +56,8 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
     public static class Deserializer extends StdDeserializer<RedrawSubEvent<?>> {
         static final Class<?>[] KNOWN_EVENTS = {
             CursorGotoEvent.class,
-            PutEvent.class
+            PutEvent.class,
+            UpdateColorEvent.class,
         };
 
         private static final EventsManager eventsManager = new EventsManager();
@@ -73,7 +65,11 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
         static {
             for (Class<?> type : KNOWN_EVENTS) {
                 eventsManager.register(type);
-                eventToEventType.put(eventsManager.getEventName(type), type);
+
+                String[] names = type.getAnnotation(EventName.class).value();
+                for (String name : names) {
+                    eventToEventType.put(name, type);
+                }
             }
         }
         public Deserializer() {

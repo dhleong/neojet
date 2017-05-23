@@ -2,7 +2,11 @@ package org.neojet
 
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.fileEditor.*
+import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.fileEditor.FileEditorLocation
+import com.intellij.openapi.fileEditor.FileEditorProvider
+import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.fileEditor.impl.FileEditorProviderManagerImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
@@ -23,8 +27,8 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
         : UserDataHolderBase(), FileEditor, TextEditor {
 
     val editor: TextEditor = createEditor(project, vFile)
+    val panel = NeojetEditorPanel()
     val nvim = NJCore.instance.attach(this)
-    val panel = NeojetEditorPanel(getUserData(NVIM_BUFFER_KEY)!!)
 
     override fun getEditor(): Editor {
         return editor.editor

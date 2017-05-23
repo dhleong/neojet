@@ -1,18 +1,13 @@
 package org.neojet.gui
 
-import io.neovim.java.Buffer
 import io.neovim.java.event.RedrawEvent
-import io.neovim.java.event.redraw.CursorGotoEvent
-import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
-import io.neovim.java.event.redraw.UnknownRedrawEvent
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
-import org.neojet.EventDispatcher
-import org.neojet.HandlesEvent
 import org.neojet.NJCore
 import java.awt.FlowLayout
-import java.util.*
+import java.awt.Graphics
+import java.util.Collections
 import java.util.concurrent.TimeUnit
 import javax.swing.JPanel
 
@@ -20,10 +15,15 @@ import javax.swing.JPanel
  * @author dhleong
  */
 
-class NeojetEditorPanel(val buffer: Buffer) : JPanel(FlowLayout()) {
+class NeojetEditorPanel : JPanel(FlowLayout()) {
     val nvim = NJCore.instance.nvim!!
     val subs = CompositeDisposable()
-    val dispatcher = EventDispatcher(this)
+    val uiModel = UiModel()
+
+    var rows: Int = 90 // default value
+    var cols: Int = 24 // default value
+
+    var isAttachedToUi: Boolean = false
 
     init {
         subs.add(
@@ -51,26 +51,52 @@ class NeojetEditorPanel(val buffer: Buffer) : JPanel(FlowLayout()) {
         )
     }
 
+    override fun invalidate() {
+        super.invalidate()
+
+        val (fontWidth, fontHeight) = getFontSize()
+
+        val rows = maxOf(1, height / fontHeight)
+        val cols = maxOf(1, width / fontWidth)
+
+        this.rows = rows
+        this.cols = cols
+
+        if (isAttachedToUi) {
+            System.out.println("Invalidate $rows x $cols")
+            nvim.uiTryResize(cols, rows)
+                .flatMap { nvim.command("redraw!") }
+                .subscribe()
+        }
+    }
+
+    override fun paintComponent(g: Graphics?) {
+        super.paintComponent(g)
+
+        val (cellWidth, cellHeight) = getFontSize()
+
+        g?.apply {
+            background = uiModel.colorBg
+            color = uiModel.colorFg
+
+            drawRect(0, 0, width * cellWidth, height * cellHeight)
+        }
+    }
+
     fun dispose() {
         subs.clear()
     }
 
+    internal fun getFontSize(): Pair<Int, Int> {
+        val fontMetrics = getFontMetrics(font)
+        val width = fontMetrics.charWidth('M')
+        val height = fontMetrics.height
+        return Pair(width, height)
+    }
+
     internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
-        events.forEach(dispatcher::dispatch)
+        events.forEach(uiModel.dispatcher::dispatch)
+        repaint()
     }
-
-    // TODO: actually, put these on some sort of model class
-    // so we can test it
-
-    @HandlesEvent fun cursorGoto(event: CursorGotoEvent) {
-        System.out.println("GOTO: $event")
-    }
-
-    @HandlesEvent fun put(event: PutEvent) {
-        System.out.println("PUT: $event")
-    }
-
-    @HandlesEvent fun onUnknown(event: UnknownRedrawEvent) =
-        System.out.println("Unknown redraw event: $event")
 }
 

@@ -163,6 +163,17 @@ public class Neovim implements Closeable {
         );
     }
 
+    @CheckReturnValue
+    public Single<Boolean> uiTryResize(int width, int height) {
+        return rpc.request(
+            Boolean.class,
+            RequestPacket.create(
+                "ui_try_resize",
+                width, height
+            )
+        );
+    }
+
     /**
      * Unregister as remote UI
      */

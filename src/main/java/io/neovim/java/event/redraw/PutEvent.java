@@ -6,7 +6,6 @@ import io.neovim.java.event.EventName;
 /**
  * @author dhleong
  */
-//@JsonDeserialize(using = PutEvent.Deserializer.class)
 @EventName("put")
 public class PutEvent extends RedrawSubEvent<PutEvent.PutValue> {
 

@@ -5,6 +5,7 @@ import io.neovim.java.NeovimAssertions.assertThat
 import io.neovim.java.event.redraw.CursorGotoEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
+import io.neovim.java.event.redraw.UpdateColorEvent
 import io.neovim.java.rpc.NeovimObjectMapper
 import org.junit.Before
 import org.junit.Test
@@ -65,6 +66,27 @@ class RedrawEventTest {
         assertThat(put.value[0])
             .hasFirst(42)
             .hasSecond(9001)
+    }
+
+    @Test fun readUpdateColor() {
+        val event = mapper.readValue(
+            """
+            |[2,
+            | "redraw",
+            | [["update_fg", [14474444]]]
+            |]
+            """.trimMargin(),
+            RedrawEvent::class.java
+        )
+
+        assertThat(event.args).hasSize(1)
+
+        assertThat(event.args[0])
+            .isInstanceOf(UpdateColorEvent::class.java)
+
+        val put = event.args[0] as UpdateColorEvent
+        assertThat(put.value).hasSize(1)
+
     }
 
     @Test fun readUnknown() {

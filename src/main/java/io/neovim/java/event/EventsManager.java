@@ -47,10 +47,12 @@ public final class EventsManager {
                 event + " does not have an @EventName annotation");
         }
 
-        String name = annot.value();
-        eventNameCache.put(event, name);
-        eventClassCache.put(name, event);
-        return name;
+        String[] names = annot.value();
+        for (String name : names) {
+            eventNameCache.put(event, name);
+            eventClassCache.put(name, event);
+        }
+        return names[0];
     }
 
     public @Nonnull JavaType getEventValueType(String eventName) {

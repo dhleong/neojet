@@ -80,16 +80,17 @@ class NJCore : ApplicationComponent {
             })
 
             if (0 == refs.getAndIncrement()) {
-//                val e = editor.editor.editor as EditorEx
-                val width = 90
-                val height = 24
+                val width = editor.panel.cols
+                val height = editor.panel.rows
                 logger.info("attach: $width, $height")
                 nvim.uiAttach(width, height, true)
+                    .blockingGet()
             }
 
             val filePath = editor.vFile.path
             nvim.command("e! $filePath").blockingGet()
             editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
+            editor.panel.isAttachedToUi = true
 
             return nvim
         }
