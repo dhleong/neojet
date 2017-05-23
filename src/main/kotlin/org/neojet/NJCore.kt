@@ -88,7 +88,7 @@ class NJCore : ApplicationComponent {
             }
 
             val filePath = editor.vFile.path
-            nvim.command("e $filePath").blockingGet()
+            nvim.command("e! $filePath").blockingGet()
             editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
 
             return nvim

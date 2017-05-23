@@ -7,7 +7,6 @@ import io.neovim.java.event.EventName;
  * @author dhleong
  */
 @EventName("cursor_goto")
-public class CursorGotoEvent extends RedrawSubEvent<CursorGotoEvent> {
-//    public int row, col;
-    public IntPair cursor;
+public class CursorGotoEvent extends RedrawSubEvent<IntPair> {
+
 }

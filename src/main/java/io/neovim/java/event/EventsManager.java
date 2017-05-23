@@ -2,6 +2,7 @@ package io.neovim.java.event;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.intellij.util.ParameterizedTypeImpl;
 import io.neovim.java.rpc.NotificationPacket;
 
 import javax.annotation.Nonnull;
@@ -86,7 +87,7 @@ public final class EventsManager {
                 }
 
                 ParameterizedType fromInterface = checkInterfaces(base);
-                if (fromInterface != null) return fromInterface;
+                if (fromInterface != null) return fillTypeVars(fromInterface, parameterized);
 
                 Class<?> asClass = ((Class<?>) ((ParameterizedType) base).getRawType());
                 base = asClass.getGenericSuperclass();
@@ -101,6 +102,36 @@ public final class EventsManager {
 
         throw new IllegalStateException(
             inputType + " does not extend NotificationPacket or Event");
+    }
+
+    private static ParameterizedType fillTypeVars(
+            ParameterizedType fromInterface,
+            ParameterizedType base) {
+        // NOTE: not thorough, but sufficient
+        Type typeArg = (fromInterface.getActualTypeArguments())[0];
+        if (!(typeArg instanceof ParameterizedType)) {
+            // no change
+            return fromInterface;
+        }
+
+        ParameterizedType paramTypeArg = (ParameterizedType) typeArg;
+        Type[] nestedArgs = paramTypeArg.getActualTypeArguments();
+        for (int i=0; i < nestedArgs.length; ++i) {
+            if (nestedArgs[i] instanceof TypeVariable) {
+                // NOTE: super non-rigorous, but should be sufficient for now
+                nestedArgs[i] = base.getActualTypeArguments()[0];
+                return new ParameterizedTypeImpl(
+                    Event.class,
+                    new ParameterizedTypeImpl(
+                        paramTypeArg.getRawType(),
+                        nestedArgs
+                    )
+                );
+            }
+        }
+
+        // no type variables
+        return fromInterface;
     }
 
     private static ParameterizedType checkInterfaces(Type originalType) {

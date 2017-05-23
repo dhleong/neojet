@@ -231,9 +231,9 @@ public class Rpc implements Closeable {
             // subscribe ourselves to make sure stdin is consumed
             incoming.subscribe(packet -> {
                 // ignore
-            }/*, e -> {
+            }, e -> {
                 // ignore
-            }*/)
+            })
         );
     }
 

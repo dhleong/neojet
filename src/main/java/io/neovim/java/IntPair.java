@@ -44,4 +44,11 @@ public class IntPair {
         return second;
     }
 
+    @Override
+    public String toString() {
+        return "IntPair{" +
+            "first=" + first +
+            ", second=" + second +
+            '}';
+    }
 }

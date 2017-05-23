@@ -5,9 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * @author dhleong
  */
-public class UnknownRedrawEvent extends RedrawSubEvent<UnknownRedrawEvent> {
-
-    public JsonNode value;
+public class UnknownRedrawEvent extends RedrawSubEvent<JsonNode> {
 
 //    @JsonCreator UnknownRedrawEvent(JsonNode node) {
 //        value = node;
@@ -16,7 +14,7 @@ public class UnknownRedrawEvent extends RedrawSubEvent<UnknownRedrawEvent> {
     @Override
     public String toString() {
         return "UnknownRedrawEvent{" +
-            "type=" + type +
+            "type=" + redrawType +
             ", value=" + value +
             '}';
     }

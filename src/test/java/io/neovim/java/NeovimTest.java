@@ -1,6 +1,7 @@
 package io.neovim.java;
 
 import io.neovim.java.event.RedrawEvent;
+import io.neovim.java.event.redraw.CursorGotoEvent;
 import io.neovim.java.event.redraw.PutEvent;
 import io.neovim.java.event.redraw.RedrawSubEvent;
 import io.neovim.java.rpc.ResponsePacket;
@@ -51,6 +52,7 @@ public class NeovimTest extends EmbeddedNeovimTest {
             .size().isGreaterThan(1);
 
         assertThat(subEvents)
-            .containsExactly(new PutEvent());
+            .hasAtLeastOneElementOfType(PutEvent.class)
+            .hasAtLeastOneElementOfType(CursorGotoEvent.class);
     }
 }

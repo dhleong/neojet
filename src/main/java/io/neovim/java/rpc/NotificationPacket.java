@@ -16,6 +16,11 @@ public class NotificationPacket<T>
     }
 
     @Override
+    public String kind() {
+        return event;
+    }
+
+    @Override
     public T value() {
         return args;
     }

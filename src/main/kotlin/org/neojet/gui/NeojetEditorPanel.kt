@@ -2,9 +2,14 @@ package org.neojet.gui
 
 import io.neovim.java.Buffer
 import io.neovim.java.event.RedrawEvent
+import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
+import io.neovim.java.event.redraw.UnknownRedrawEvent
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import org.neojet.EventDispatcher
+import org.neojet.HandlesEvent
 import org.neojet.NJCore
 import java.awt.FlowLayout
 import java.util.*
@@ -18,6 +23,7 @@ import javax.swing.JPanel
 class NeojetEditorPanel(val buffer: Buffer) : JPanel(FlowLayout()) {
     val nvim = NJCore.instance.nvim!!
     val subs = CompositeDisposable()
+    val dispatcher = EventDispatcher(this)
 
     init {
         subs.add(
@@ -26,18 +32,14 @@ class NeojetEditorPanel(val buffer: Buffer) : JPanel(FlowLayout()) {
                 // buffer into a List, but assuming either an empty or singleton
                 // list where possible to avoid unnecessary allocations
 
-                .flatMapSingle<List<List<RedrawSubEvent<*>>>> { it.reduce(Collections.emptyList(),
+                .flatMapSingle<List<RedrawSubEvent<*>>> { it.reduce(Collections.emptyList(),
                     { list, item ->
                         if (list.isEmpty()) {
-                            Collections.singletonList(item)
-                        } else if (list.size == 1) {
-                            // it was a singletonList; make it a proper ArrayList
-                            val result = ArrayList<List<RedrawSubEvent<*>>>()
-                            result.add(item)
-                            result
+                            // was emptyList default; return the current list
+                            item
                         } else {
                             // just add to the existing list
-                            list.add(item)
+                            list.addAll(item)
                             list
                         }
                     })
@@ -53,14 +55,22 @@ class NeojetEditorPanel(val buffer: Buffer) : JPanel(FlowLayout()) {
         subs.clear()
     }
 
-    internal fun dispatchRedrawEvents(events: List<List<RedrawSubEvent<*>>>) {
-        events.forEach(this::dispatchRedrawEvent)
+    internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
+        events.forEach(dispatcher::dispatch)
     }
 
-    internal fun dispatchRedrawEvent(event: List<RedrawSubEvent<*>>) {
-//        System.out.println("Dispatch: ${event[0]}) : ${event[1]}")
-        System.out.println("Dispatch: " + event)
+    // TODO: actually, put these on some sort of model class
+    // so we can test it
+
+    @HandlesEvent fun cursorGoto(event: CursorGotoEvent) {
+        System.out.println("GOTO: $event")
     }
 
+    @HandlesEvent fun put(event: PutEvent) {
+        System.out.println("PUT: $event")
+    }
+
+    @HandlesEvent fun onUnknown(event: UnknownRedrawEvent) =
+        System.out.println("Unknown redraw event: $event")
 }
 
