@@ -1,8 +1,10 @@
 package io.neovim.java.rpc.impl;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.JsonTokenId;
+import com.fasterxml.jackson.databind.JavaType;
 
 import java.io.IOException;
 
@@ -10,20 +12,17 @@ import java.io.IOException;
  * @author dhleong
  */
 public class JsonParserUtil {
-    static JsonToken expect(JsonParser p, int type) throws IOException {
+    static void expect(JsonParser p, JsonToken type) throws IOException {
         JsonToken tok = p.getCurrentToken();
-        if (tok.id() != type) {
-            throw new IllegalStateException(
-                "Expected "  + type + " but was " + tok.id());
+        if (tok != type) {
+            throw new JsonParseException(p,
+                "Expected "  + type + " but was " + tok);
         }
-
-        return tok;
     }
 
-    static JsonToken expectNext(JsonParser p, int type) throws IOException {
-        JsonToken tok = p.nextToken();
+    public static void expectNext(JsonParser p, JsonToken type) throws IOException {
+        p.nextToken();
         expect(p, type);
-        return tok;
     }
 
     static int nextInt(JsonParser p) throws IOException {
@@ -36,7 +35,7 @@ public class JsonParserUtil {
         return p.getValueAsLong();
     }
 
-    static String nextString(JsonParser p) throws IOException {
+    public static String nextString(JsonParser p) throws IOException {
         p.nextValue();
         return p.getValueAsString();
     }
@@ -51,5 +50,13 @@ public class JsonParserUtil {
             return null;
         }
         return p.readValueAs(type);
+    }
+
+    static <T> T nextValue(JsonParser p, JavaType type) throws IOException {
+        JsonToken tok = p.nextValue();
+        if (tok.id() == JsonTokenId.ID_END_ARRAY) {
+            return null;
+        }
+        return p.getCodec().readValue(p, type);
     }
 }

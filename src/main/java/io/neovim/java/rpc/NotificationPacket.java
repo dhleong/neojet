@@ -1,14 +1,23 @@
 package io.neovim.java.rpc;
 
+import io.neovim.java.event.Event;
+
 /**
  * @author dhleong
  */
-public class NotificationPacket<T> extends Packet {
+public class NotificationPacket<T>
+        extends Packet
+        implements Event<T> {
     public String event;
     public T args;
 
-    private NotificationPacket() {
+    protected NotificationPacket() {
         type = Type.NOTIFICATION;
+    }
+
+    @Override
+    public T value() {
+        return args;
     }
 
     @Override

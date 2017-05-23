@@ -1,13 +1,18 @@
 package io.neovim.java.rpc.impl;
 
+import com.fasterxml.jackson.databind.BeanDescription;
+import com.fasterxml.jackson.databind.DeserializationConfig;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.neovim.java.Buffer;
 import io.neovim.java.IntPair;
 import io.neovim.java.Rpc;
 import io.neovim.java.Tabpage;
 import io.neovim.java.Window;
+import io.neovim.java.event.EventsManager;
+import io.neovim.java.event.redraw.RedrawSubEvent;
 import io.neovim.java.rpc.Packet;
 import io.reactivex.functions.BiFunction;
 
@@ -19,17 +24,32 @@ import java.util.Map;
 public class NeovimMapperModule extends SimpleModule {
     private final Rpc rpc;
 
-    public NeovimMapperModule(Rpc rpc, Map<Integer, Class<?>> requestedTypes) {
+    public NeovimMapperModule(
+            Rpc rpc,
+            Map<Integer, Class<?>> requestedTypes,
+            EventsManager eventsManager) {
         this.rpc = rpc;
 
         addDeserializer(Packet.class,
-            new PacketDeserializer(requestedTypes));
+            new PacketDeserializer(requestedTypes, eventsManager));
         addDeserializer(IntPair.class,
             new IntPairDeserializer());
 
         defineRemoteObject(Buffer.class, Buffer::new);
         defineRemoteObject(Window.class, Window::new);
         defineRemoteObject(Tabpage.class, Tabpage::new);
+
+        setDeserializerModifier(new BeanDeserializerModifier() {
+            @Override
+            public JsonDeserializer<?> modifyDeserializer(
+                    DeserializationConfig config, BeanDescription beanDesc,
+                    JsonDeserializer<?> deserializer) {
+                if (beanDesc.getBeanClass() == RedrawSubEvent.class) {
+                    return new RedrawSubEvent.Deserializer();
+                }
+                return deserializer;
+            }
+        });
     }
 
     public JsonDeserializer<?> findDeserializer(Class<?> klass) {

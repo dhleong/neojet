@@ -51,7 +51,7 @@ dependencies {
     compile "org.msgpack:jackson-dataformat-msgpack:${vs.msgpack}"
     compile 'io.reactivex.rxjava2:rxjava:2.1.0'
 
-//    compile 'com.tspoon.traceur:traceur:1.0.1'
+    compile 'com.tspoon.traceur:traceur:1.0.1'
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.7.0'

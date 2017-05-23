@@ -1,6 +1,8 @@
 package io.neovim.java;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tspoon.traceur.Traceur;
+import io.neovim.java.event.EventsManager;
 import io.neovim.java.rpc.NeovimObjectMapper;
 import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.Packet;
@@ -54,6 +56,8 @@ public class Rpc implements Closeable {
         OutputStream getOutputStream();
     }
 
+    final EventsManager eventsManager = new EventsManager();
+
     final Rpc.Channel channel;
     final OutputStream out;
     final InputStream in;
@@ -77,7 +81,8 @@ public class Rpc implements Closeable {
         out = channel.getOutputStream();
         err = channel.getErrorStream();
 
-        mapper = NeovimObjectMapper.newInstance(this, requestedTypes);
+        mapper = NeovimObjectMapper.newInstance(
+            this, requestedTypes, eventsManager);
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())
@@ -226,9 +231,9 @@ public class Rpc implements Closeable {
             // subscribe ourselves to make sure stdin is consumed
             incoming.subscribe(packet -> {
                 // ignore
-            }, e -> {
+            }/*, e -> {
                 // ignore
-            })
+            }*/)
         );
     }
 
@@ -249,9 +254,11 @@ public class Rpc implements Closeable {
     }
 
     private Flowable<Packet> observeIncoming() {
+        Traceur.enableLogging();
         return Flowable.create(emitter -> {
             if (reading.getAndSet(true)) {
                 System.err.println("observeIncoming" + emitter.getClass() + "@" + emitter.hashCode());
+//                Thread.dumpStack();
                 emitter.onError(
                     new IllegalStateException("Multiple readers")
                 );

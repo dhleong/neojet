@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.Rpc;
+import io.neovim.java.event.EventsManager;
 import io.neovim.java.rpc.impl.NeovimExtensionTypes;
 import io.neovim.java.rpc.impl.NeovimMapperModule;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
@@ -20,11 +21,15 @@ public class NeovimObjectMapper {
     }
 
     public static ObjectMapper newInstance() {
-        return newInstance(null, Collections.emptyMap());
+        return newInstance(null, Collections.emptyMap(), new EventsManager());
     }
 
-    public static ObjectMapper newInstance(Rpc rpc, Map<Integer, Class<?>> requestedTypes) {
-        NeovimMapperModule module = new NeovimMapperModule(rpc, requestedTypes);
+    public static ObjectMapper newInstance(
+            Rpc rpc,
+            Map<Integer, Class<?>> requestedTypes,
+            EventsManager eventsManager) {
+        NeovimMapperModule module = new NeovimMapperModule(
+            rpc, requestedTypes, eventsManager);
 
         MessagePackFactory factory = new MessagePackFactory();
         factory.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);

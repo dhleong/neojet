@@ -3,6 +3,7 @@ package io.neovim.java.rpc;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.Buffer;
 import io.neovim.java.EmbeddedNeovimTest;
+import io.neovim.java.event.EventsManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,7 +30,7 @@ public class RemoteObjectTest extends EmbeddedNeovimTest {
         Buffer b = nvim.current.buffer().blockingGet();
 
         ObjectMapper mapper =
-            NeovimObjectMapper.newInstance(rpc, Collections.emptyMap());
+            NeovimObjectMapper.newInstance(rpc, Collections.emptyMap(), new EventsManager());
 
         byte[] bytes = mapper.writeValueAsBytes(b);
 

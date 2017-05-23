@@ -1,6 +1,8 @@
 package io.neovim.java;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.neovim.java.event.RedrawEvent;
+import io.neovim.java.event.redraw.PutEvent;
+import io.neovim.java.event.redraw.RedrawSubEvent;
 import io.neovim.java.rpc.ResponsePacket;
 import org.junit.Test;
 
@@ -40,11 +42,15 @@ public class NeovimTest extends EmbeddedNeovimTest {
                 .blockingGet()
         ).isEqualTo("\ntest");
 
-        JsonNode node = nvim.<JsonNode>notifications("redraw")
+        List<RedrawSubEvent<?>> subEvents = nvim.notifications(RedrawEvent.class)
             .timeout(5, TimeUnit.SECONDS)
             .firstOrError()
             .blockingGet();
-        assertThat(node)
-            .isNotNull();
+        assertThat(subEvents)
+            .isNotNull()
+            .size().isGreaterThan(1);
+
+        assertThat(subEvents)
+            .containsExactly(new PutEvent());
     }
 }
