@@ -3,14 +3,19 @@ package org.neojet
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ApplicationComponent
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.event.EditorFactoryEvent
+import com.intellij.openapi.editor.event.EditorFactoryListener
 import com.intellij.openapi.util.Disposer
 import io.neovim.java.Neovim
+import java.awt.KeyboardFocusManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.reflect.KProperty
 
-class NJCore : ApplicationComponent {
+class NJCore : ApplicationComponent, Disposable {
+
     companion object {
         val COMPONENT_NAME = "NJCore"
 
@@ -21,7 +26,7 @@ class NJCore : ApplicationComponent {
             }
         }
     }
-    val logger = Logger.getLogger("NeoJet:NJCore")
+    val logger = Logger.getLogger("NeoJet:NJCore")!!
 
     var nvim: Neovim? = null
     var refs = AtomicInteger(0)
@@ -33,6 +38,10 @@ class NJCore : ApplicationComponent {
         nvim = null
 
 //        TypedActionFacade.Instance.restoreHandler()
+    }
+
+    override fun dispose() {
+        Disposer.dispose(this)
     }
 
     override fun initComponent() {
@@ -47,25 +56,21 @@ class NJCore : ApplicationComponent {
             return
         }
 
-//        TypedActionFacade.Instance.installHandler({ original ->
-//            NeovimTypedActionHandler(original)
-//        })
+        EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
+            override fun editorReleased(event: EditorFactoryEvent) {
+                event.editor.getUserData(NEOJET_ENHANCED_EDITOR)?.let {
+                    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                        .removeKeyEventDispatcher(it.keyEventDispatcher)
+                }
+            }
 
-//        EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
-//            override fun editorReleased(event: EditorFactoryEvent) {
-//                TODO("not implemented")
-//            }
-//
-//            override fun editorCreated(event: EditorFactoryEvent) {
-//                event.editor.component.addKeyListener(object : KeyAdapter() {
-//                    override fun keyTyped(e: KeyEvent?) {
-//                        e?.let {
-//                            System.out.println(it)
-//                        }
-//                    }
-//                })
-//            }
-//        })
+            override fun editorCreated(event: EditorFactoryEvent) {
+                // TODO we can probably get away with a single KeyEventDispatcher
+                val facade = NeojetEnhancedEditorFacade.install(event.editor)
+                KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                    .addKeyEventDispatcher(facade.keyEventDispatcher)
+            }
+        }, this)
     }
 
     fun attach(editor: NeojetTextFileEditor): Neovim {

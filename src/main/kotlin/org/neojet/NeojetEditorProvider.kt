@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 class NeojetEditorProvider : FileEditorProvider, DumbAware {
     override fun getEditorTypeId(): String = "neojet"
 
-    override fun accept(project: Project, file: VirtualFile): Boolean = true
+    override fun accept(project: Project, file: VirtualFile): Boolean = false // NOTE: custom editor disabled for now
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor {
         return NeojetTextFileEditor(project, file)
