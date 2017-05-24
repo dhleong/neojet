@@ -1,5 +1,11 @@
 package org.neojet.gui
 
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.editor.colors.EditorColorsListener
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.util.Disposer
+import com.intellij.util.messages.MessageBusConnection
 import io.neovim.java.event.RedrawEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
 import io.reactivex.disposables.CompositeDisposable
@@ -9,6 +15,8 @@ import java.awt.Color
 import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 import javax.swing.JPanel
@@ -20,7 +28,7 @@ import javax.swing.JPanel
 val EDITOR_ROWS_DEFAULT = 24
 val EDITOR_COLS_DEFAULT = 90
 
-class NeojetEditorPanel : JPanel(FlowLayout()) {
+class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     val nvim = NJCore.instance.nvim!!
     val subs = CompositeDisposable()
     val uiModel = UiModel()
@@ -30,8 +38,10 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
 
     var isAttachedToUi: Boolean = false
 
+    private val messageBusConnection: MessageBusConnection
+
     init {
-        subs.add(
+        subs.addAll(
             nvim.notifications(RedrawEvent::class.java)
                 .window(4, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
                 // buffer into a List, but assuming either an empty or singleton
@@ -55,8 +65,24 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
                 .subscribe(this::dispatchRedrawEvents)
         )
 
-        // TODO request desired gui font/size from nvim instance
-        font = Font(Font.MONOSPACED, Font.PLAIN, 14)
+        // listen for font changes so we can resize ourselves
+        messageBusConnection =
+            ApplicationManager.getApplication()
+                .messageBus
+                .connect(this)
+
+        messageBusConnection.subscribe(EditorColorsManager.TOPIC, EditorColorsListener {
+            updateFont()
+            repaint()
+        })
+
+        updateFont()
+    }
+
+    override fun dispose() {
+        subs.clear()
+
+        Disposer.dispose(this)
     }
 
     override fun invalidate() {
@@ -95,10 +121,13 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         val windowWidth = cols * cellWidth
         background = uiModel.colorBg
 
-        g?.apply {
-            color = uiModel.colorFg
+        (g as Graphics2D).apply {
+            setRenderingHint(
+                RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_GASP
+            )
 
-//            fillRect(0, 0, windowWidth, rows * cellHeight)
+            color = uiModel.colorFg
 
             for (y in 0 until rows) {
                 for (x in 0 until cols) {
@@ -115,10 +144,6 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         }
     }
 
-    fun dispose() {
-        subs.clear()
-    }
-
     internal fun getFontSize(): Pair<Int, Int> {
         val fontMetrics = getFontMetrics(font)
         val width = fontMetrics.charWidth('M')
@@ -131,7 +156,7 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         repaint()
     }
 
-    fun paintCell(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
+    internal fun paintCell(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
         // TODO blink
         if (hasCursor) {
             g.color = uiModel.colorBg.inverted()
@@ -146,6 +171,24 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         if (hasCursor) {
             g.color = uiModel.colorFg
         }
+    }
+
+    private fun updateFont() {
+        font = pickFont()
+    }
+
+    private fun pickFont(): Font {
+        // NOTE: sadly, neovim disabled the guifont option, but we can
+        // respect the user's intellij settings
+        var fontSize = 14
+        var fontFace = Font.MONOSPACED
+
+        EditorColorsManager.getInstance().globalScheme.let {
+            fontFace = it.editorFontName
+            fontSize = it.editorFontSize
+        }
+
+        return Font(fontFace, Font.PLAIN, fontSize)
     }
 }
 
