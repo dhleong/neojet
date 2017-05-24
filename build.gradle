@@ -61,7 +61,6 @@ sourceSets {
     test.java.srcDirs += "src/test/java-gen"
 }
 
-// NOTE: this barfs on the JsonNode class right now....
 assertjGen {
     // specify target class or package names by array.
     classOrPackageNames = [

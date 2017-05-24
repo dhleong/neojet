@@ -5,7 +5,9 @@ import io.neovim.java.event.redraw.RedrawSubEvent
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import org.neojet.NJCore
+import java.awt.Color
 import java.awt.FlowLayout
+import java.awt.Font
 import java.awt.Graphics
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -15,13 +17,16 @@ import javax.swing.JPanel
  * @author dhleong
  */
 
+val EDITOR_ROWS_DEFAULT = 24
+val EDITOR_COLS_DEFAULT = 90
+
 class NeojetEditorPanel : JPanel(FlowLayout()) {
     val nvim = NJCore.instance.nvim!!
     val subs = CompositeDisposable()
     val uiModel = UiModel()
 
-    var rows: Int = 90 // default value
-    var cols: Int = 24 // default value
+    var rows: Int = EDITOR_ROWS_DEFAULT
+    var cols: Int = EDITOR_COLS_DEFAULT
 
     var isAttachedToUi: Boolean = false
 
@@ -49,6 +54,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
                 .observeOn(UiThreadScheduler.instance)
                 .subscribe(this::dispatchRedrawEvents)
         )
+
+        // TODO request desired gui font/size from nvim instance
+        font = Font(Font.MONOSPACED, Font.PLAIN, 14)
     }
 
     override fun invalidate() {
@@ -62,8 +70,18 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         this.rows = rows
         this.cols = cols
 
-        if (isAttachedToUi) {
-            System.out.println("Invalidate $rows x $cols")
+        if (isAttachedToUi && cols > 1 && rows > 1) {
+            val oldRows = uiModel.cells.rows
+            val oldCols = uiModel.cells.cols
+            try {
+                uiModel.resize(rows, cols)
+            } catch (e: Exception) {
+                throw RuntimeException(
+                    "Error resizing from ($oldRows x $oldCols) -> ($rows x $cols)",
+                    e
+                )
+            }
+
             nvim.uiTryResize(cols, rows)
                 .flatMap { nvim.command("redraw!") }
                 .subscribe()
@@ -74,12 +92,26 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         super.paintComponent(g)
 
         val (cellWidth, cellHeight) = getFontSize()
+        val windowWidth = cols * cellWidth
+        background = uiModel.colorBg
 
         g?.apply {
-            background = uiModel.colorBg
             color = uiModel.colorFg
 
-            drawRect(0, 0, width * cellWidth, height * cellHeight)
+//            fillRect(0, 0, windowWidth, rows * cellHeight)
+
+            for (y in 0 until rows) {
+                for (x in 0 until cols) {
+                    val hasCursor = uiModel.cursorLine == y && uiModel.cursorCol == x
+                    uiModel.cells[y, x].let {
+                        paintCell(g, it, cellWidth, cellHeight, hasCursor)
+                    }
+
+                    translate(cellWidth, 0)
+                }
+
+                translate(-windowWidth, cellHeight)
+            }
         }
     }
 
@@ -98,5 +130,25 @@ class NeojetEditorPanel : JPanel(FlowLayout()) {
         events.forEach(uiModel.dispatcher::dispatch)
         repaint()
     }
+
+    fun paintCell(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
+        // TODO blink
+        if (hasCursor) {
+            g.color = uiModel.colorBg.inverted()
+            g.fillRect(0, 0, cellWidth, cellHeight)
+
+            g.color = uiModel.colorFg.inverted()
+        }
+
+        val offset = g.getFontMetrics(g.font).descent
+        g.drawString(cell.value, 0, cellHeight - offset)
+
+        if (hasCursor) {
+            g.color = uiModel.colorFg
+        }
+    }
 }
+
+private fun Color.inverted(): Color =
+    Color(255 - red, 255 - green, 255 - blue)
 
