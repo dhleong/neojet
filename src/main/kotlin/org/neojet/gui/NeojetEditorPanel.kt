@@ -17,6 +17,10 @@ import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.event.KeyAdapter
+import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 import javax.swing.JPanel
@@ -76,7 +80,28 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
             repaint()
         })
 
+        // initial font config
         updateFont()
+
+        // handle keyboard events
+        focusTraversalKeysEnabled = false
+        isFocusable = true
+        requestFocus()
+        addKeyListener(object : KeyAdapter() {
+            override fun keyTyped(e: KeyEvent?) {
+                // TODO special keys modifiers?
+                e?.let {
+                    nvim.input(it.keyChar.toString())
+                }
+            }
+        })
+
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) {
+                requestFocus()
+                // TODO move cursor?
+            }
+        })
     }
 
     override fun dispose() {

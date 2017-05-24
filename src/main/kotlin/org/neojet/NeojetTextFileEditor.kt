@@ -27,7 +27,9 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
         : UserDataHolderBase(), FileEditor, TextEditor {
 
     val editor: TextEditor = createEditor(project, vFile)
+
     val panel = NeojetEditorPanel()
+
     val nvim = NJCore.instance.attach(this)
 
     override fun getEditor(): Editor {
@@ -47,7 +49,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun getPreferredFocusedComponent(): JComponent? {
-        return null
+        return panel
     }
 
     override fun getName(): String {
