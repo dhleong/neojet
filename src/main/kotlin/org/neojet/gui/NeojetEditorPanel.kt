@@ -6,12 +6,12 @@ import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.MessageBusConnection
-import io.neovim.java.event.RedrawEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
 import org.neojet.NJCore
+import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getEditorFont
+import org.neojet.util.input
 import java.awt.Color
 import java.awt.FlowLayout
 import java.awt.Graphics
@@ -21,8 +21,6 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import java.util.Collections
-import java.util.concurrent.TimeUnit
 import javax.swing.JPanel
 
 /**
@@ -46,26 +44,7 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
 
     init {
         subs.addAll(
-            nvim.notifications(RedrawEvent::class.java)
-                .window(4, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
-                // buffer into a List, but assuming either an empty or singleton
-                // list where possible to avoid unnecessary allocations
-
-                .flatMapSingle<List<RedrawSubEvent<*>>> { it.reduce(Collections.emptyList(),
-                    { list, item ->
-                        if (list.isEmpty()) {
-                            // was emptyList default; return the current list
-                            item
-                        } else {
-                            // just add to the existing list
-                            list.addAll(item)
-                            list
-                        }
-                    })
-                }
-
-                .filter { it.isNotEmpty() }
-                .observeOn(UiThreadScheduler.instance)
+            nvim.bufferedRedrawEvents()
                 .subscribe(this::dispatchRedrawEvents)
         )
 
@@ -89,9 +68,8 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         requestFocus()
         addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent?) {
-                // TODO special keys modifiers?
                 e?.let {
-                    nvim.input(it.keyChar.toString())
+                    nvim.input(it).subscribe()
                 }
             }
         })

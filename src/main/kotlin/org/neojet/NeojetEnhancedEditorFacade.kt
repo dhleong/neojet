@@ -2,13 +2,19 @@ package org.neojet
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import io.neovim.java.Neovim
+import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.RedrawSubEvent
+import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
+import org.neojet.util.bufferedRedrawEvents
+import org.neojet.util.input
 import java.awt.Component
 import java.awt.KeyEventDispatcher
 import java.awt.event.KeyEvent
@@ -55,13 +61,41 @@ class NeojetEnhancedEditorFacade private constructor(val editor: EditorEx) : Dis
     }
 
     val nvim: Neovim = NJCore.instance.attach(editor)
+    val subs = CompositeDisposable()
+    val dispatcher = EventDispatcher(this)
+
+    init {
+        subs.add(
+            nvim.bufferedRedrawEvents()
+                .subscribe(this::dispatchRedrawEvents)
+        )
+    }
 
     override fun dispose() {
+        subs.dispose()
     }
 
     fun dispatchTypedKey(e: KeyEvent) {
         val buffer = editor.buffer
         System.out.println("Dispatch typed: $e on $buffer")
+        nvim.input(e).subscribe()
+    }
+
+    /*
+     * Notifications from nvim
+     */
+
+    @HandlesEvent fun cursorMoved(event: CursorGotoEvent) {
+        System.out.println("cursorMoved($event)")
+        event.value[0].let {
+            editor.caretModel.primaryCaret.moveToLogicalPosition(
+                LogicalPosition(it.row(), it.col())
+            )
+        }
+    }
+
+    internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
+        events.forEach(dispatcher::dispatch)
     }
 }
 
