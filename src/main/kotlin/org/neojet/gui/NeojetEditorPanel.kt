@@ -11,9 +11,9 @@ import io.neovim.java.event.redraw.RedrawSubEvent
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import org.neojet.NJCore
+import org.neojet.util.getEditorFont
 import java.awt.Color
 import java.awt.FlowLayout
-import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -199,22 +199,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     }
 
     private fun updateFont() {
-        font = pickFont()
+        font = getEditorFont()
     }
 
-    private fun pickFont(): Font {
-        // NOTE: sadly, neovim disabled the guifont option, but we can
-        // respect the user's intellij settings
-        var fontSize = 14
-        var fontFace = Font.MONOSPACED
-
-        EditorColorsManager.getInstance().globalScheme.let {
-            fontFace = it.editorFontName
-            fontSize = it.editorFontSize
-        }
-
-        return Font(fontFace, Font.PLAIN, fontSize)
-    }
 }
 
 private fun Color.inverted(): Color =

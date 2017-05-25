@@ -1,7 +1,14 @@
 package org.neojet
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.impl.EditorImpl
+import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
+import io.neovim.java.Neovim
+import org.neojet.util.buffer
 import java.awt.Component
 import java.awt.KeyEventDispatcher
 import java.awt.event.KeyEvent
@@ -13,11 +20,22 @@ import javax.swing.JComponent
 
 val NEOJET_ENHANCED_EDITOR = Key<NeojetEnhancedEditorFacade>("org.neojet.enhancedEditor")
 
-class NeojetEnhancedEditorFacade private constructor(val editor: Editor) {
+class NeojetEnhancedEditorFacade private constructor(val editor: EditorEx) : Disposable {
     companion object {
         fun install(editor: Editor): NeojetEnhancedEditorFacade {
+            if (!(editor is EditorImpl) || (editor is TextEditor)) {
+                throw IllegalArgumentException("$editor is not an EditorEx or TextEditor")
+            }
+
             val facade = NeojetEnhancedEditorFacade(editor)
             editor.putUserData(NEOJET_ENHANCED_EDITOR, facade)
+
+            if (editor is EditorImpl) {
+                Disposer.register(editor.disposable, facade)
+            } else if (editor is TextEditor) {
+                Disposer.register(editor, facade)
+            }
+
             return facade
         }
     }
@@ -36,8 +54,14 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) {
         }
     }
 
+    val nvim: Neovim = NJCore.instance.attach(editor)
+
+    override fun dispose() {
+    }
+
     fun dispatchTypedKey(e: KeyEvent) {
-        System.out.println("Dispatch typed: $e")
+        val buffer = editor.buffer
+        System.out.println("Dispatch typed: $e on $buffer")
     }
 }
 

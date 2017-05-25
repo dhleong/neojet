@@ -3,15 +3,24 @@ package org.neojet
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ApplicationComponent
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.EditorFactoryEvent
 import com.intellij.openapi.editor.event.EditorFactoryListener
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
+import io.neovim.java.IntPair
 import io.neovim.java.Neovim
+import org.neojet.util.component1
+import org.neojet.util.component2
+import org.neojet.util.disposable
+import org.neojet.util.getEditorFont
+import org.neojet.util.vFile
 import java.awt.KeyboardFocusManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import java.util.logging.Logger
+import javax.swing.JComponent
 import kotlin.reflect.KProperty
 
 class NJCore : ApplicationComponent, Disposable {
@@ -74,31 +83,64 @@ class NJCore : ApplicationComponent, Disposable {
     }
 
     fun attach(editor: NeojetTextFileEditor): Neovim {
-        if (nvim == null) throw IllegalStateException("No nvim")
+        nvim?.let { nvim ->
+            uiAttach(nvim, editor.getEditor(), editor.vFile, IntPair(
+                editor.panel.cols,
+                editor.panel.rows
+            ))
 
-        nvim!!.let { nvim ->
-            Disposer.register(editor, Disposable {
-                if (0 == refs.decrementAndGet()) {
-                    nvim.uiDetach()
-                    logger.info("detach last")
-                }
-            })
-
-            if (0 == refs.getAndIncrement()) {
-                val width = editor.panel.cols
-                val height = editor.panel.rows
-                logger.info("attach: $width, $height")
-                nvim.uiAttach(width, height, true)
-                    .blockingGet()
-            }
-
-            val filePath = editor.vFile.path
-            nvim.command("e! $filePath").blockingGet()
-            editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
             editor.panel.isAttachedToUi = true
 
             return nvim
         }
+
+        throw IllegalStateException("No nvim")
+    }
+
+    fun attach(editor: Editor): Neovim {
+        nvim?.let { nvim ->
+            val (textWidth, textHeight) = editor.component.textDimensions
+            uiAttach(nvim, editor, editor.document.vFile, IntPair(
+                maxOf(60, editor.component.width / textWidth),
+                maxOf(25, editor.component.height / textHeight)
+            ))
+
+            return nvim
+        }
+
+        throw IllegalStateException("No nvim")
+    }
+
+    private fun uiAttach(nvim: Neovim, editor: Editor, vFile: VirtualFile, windowSize: IntPair) {
+        Disposer.register(editor.disposable, Disposable {
+            if (0 == refs.decrementAndGet()) {
+                logger.info("detach last")
+                nvim.uiDetach()
+                    .blockingGet()
+            }
+        })
+
+        if (0 == refs.getAndIncrement()) {
+            val (width, height) = windowSize
+            logger.info("attach: $width, $height")
+            nvim.uiAttach(width, height, true)
+                .blockingGet()
+        }
+
+        val filePath = vFile.path
+        nvim.command("e! $filePath").blockingGet()
+        editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
     }
 
 }
+
+private val JComponent.textDimensions: IntPair
+    get() {
+        val font = getEditorFont()
+        val fontMetrics = getFontMetrics(font)
+        return IntPair(
+            fontMetrics.charWidth('M'),
+            fontMetrics.height
+        )
+    }
+
