@@ -55,7 +55,9 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
 
     public static class Deserializer extends StdDeserializer<RedrawSubEvent<?>> {
         static final Class<?>[] KNOWN_EVENTS = {
+            ClearScreenEvent.class,
             CursorGotoEvent.class,
+            EolClearEvent.class,
             ModeChangeEvent.class,
             ModeInfoSetEvent.class,
             PutEvent.class,

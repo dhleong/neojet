@@ -3,6 +3,8 @@ package org.neojet
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
+import com.intellij.openapi.editor.event.CaretAdapter
+import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.DumbService
@@ -10,6 +12,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import io.neovim.java.Neovim
 import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.EolClearEvent
 import io.neovim.java.event.redraw.ModeChangeEvent
 import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.PutEvent
@@ -18,6 +21,7 @@ import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
+import org.neojet.util.getLineEndOffset
 import org.neojet.util.inWriteAction
 import org.neojet.util.input
 import org.neojet.util.runUndoTransparently
@@ -66,6 +70,21 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
+    val caretMovedListener = object : CaretAdapter() {
+        override fun caretPositionChanged(e: CaretEvent?) {
+            if (e != null && !movingCursor) {
+                val line = e.newPosition.line + 1 // 0-indexed to 1-indexed
+                val column = e.newPosition.column
+
+                nvim.current.window()
+                    .flatMap { window ->
+                        window.setCursor(line, column)
+                    }
+                    .subscribe()
+            }
+        }
+    }
+
     val nvim: Neovim = NJCore.instance.attach(editor)
     val subs = CompositeDisposable()
     val dispatcher = EventDispatcher(this)
@@ -73,10 +92,13 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     internal lateinit var modes: List<ModeInfo>
     internal var mode: ModeInfo? = null
 
+    var movingCursor = false
     var cursorRow: Int = 0
     var cursorCol: Int = 0
 
     init {
+        editor.caretModel.addCaretListener(caretMovedListener)
+
         subs.add(
             nvim.bufferedRedrawEvents()
                 .subscribe(this::dispatchRedrawEvents)
@@ -85,6 +107,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
     override fun dispose() {
         subs.dispose()
+
+        editor.caretModel.removeCaretListener(caretMovedListener)
     }
 
     fun dispatchTypedKey(e: KeyEvent) {
@@ -99,7 +123,33 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
      * Notifications from nvim
      */
 
+    @HandlesEvent fun clearToEol(event: EolClearEvent) {
+        if (DumbService.getInstance(editor.project!!).isDumb) return
+
+        val start = editor.caretModel.primaryCaret.offset
+        val line = editor.offsetToLogicalPosition(start).line
+        val lineEndOffset = editor.getLineEndOffset(line)
+        val end = minOf(
+            editor.document.textLength - 1,
+            lineEndOffset
+        )
+
+        if (end < start) {
+            // usually for drawing status line, etc.
+            return
+        }
+
+        inWriteAction {
+            runUndoTransparently {
+                System.out.println("clearEol($start, $end)")
+                editor.document.deleteString(start, end)
+            }
+        }
+    }
+
     @HandlesEvent fun cursorMoved(event: CursorGotoEvent) {
+        movingCursor = true
+
         event.value[0].let {
             cursorRow = it.row()
             cursorCol = it.col()
@@ -107,6 +157,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
                 LogicalPosition(cursorRow, cursorCol)
             )
         }
+
+        movingCursor = false
     }
 
     @HandlesEvent fun modeInfoSet(event: ModeInfoSetEvent) {
@@ -125,8 +177,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
         val start = editor.caretModel.primaryCaret.offset
         val line = editor.offsetToLogicalPosition(start).line
-        val nextLineStartOffset = editor.logicalPositionToOffset(LogicalPosition(line + 1, 0))
-        val delta = nextLineStartOffset - 1 - start // -1 to get end of current line
+        val lineEndOffset = editor.getLineEndOffset(line)
+        val delta = lineEndOffset - start
         val end = minOf(
             editor.document.textLength - 1,
             start + minOf(event.value.size, delta)
@@ -140,6 +192,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
         inWriteAction {
             runUndoTransparently {
+                System.out.println("REPLACE($start, $end) <- ${event.bytesToCharSequence()}")
                 editor.document.replaceString(start, end, event.bytesToCharSequence())
             }
         }

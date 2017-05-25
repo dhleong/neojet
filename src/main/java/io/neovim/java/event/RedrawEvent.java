@@ -10,8 +10,6 @@ import java.util.List;
  */
 @EventName("redraw")
 public class RedrawEvent extends NotificationPacket<List<RedrawSubEvent<?>>> {
-//    public List<RedrawSubEvent<?>> subEvents;
-
     @Override
     public List<RedrawSubEvent<?>> value() {
         return args;
