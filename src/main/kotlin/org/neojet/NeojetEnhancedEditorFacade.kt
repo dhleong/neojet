@@ -10,7 +10,10 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import io.neovim.java.Neovim
 import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.ModeChangeEvent
+import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
+import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
@@ -64,6 +67,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: EditorEx) : Dis
     val subs = CompositeDisposable()
     val dispatcher = EventDispatcher(this)
 
+    internal lateinit var modes: List<ModeInfo>
+    internal var mode: ModeInfo? = null
+
     init {
         subs.add(
             nvim.bufferedRedrawEvents()
@@ -77,8 +83,10 @@ class NeojetEnhancedEditorFacade private constructor(val editor: EditorEx) : Dis
 
     fun dispatchTypedKey(e: KeyEvent) {
         val buffer = editor.buffer
-        System.out.println("Dispatch typed: $e on $buffer")
-        nvim.input(e).subscribe()
+
+        nvim.current.bufferSet(buffer)
+            .flatMap { nvim.input(e) }
+            .subscribe()
     }
 
     /*
@@ -86,12 +94,27 @@ class NeojetEnhancedEditorFacade private constructor(val editor: EditorEx) : Dis
      */
 
     @HandlesEvent fun cursorMoved(event: CursorGotoEvent) {
-        System.out.println("cursorMoved($event)")
         event.value[0].let {
             editor.caretModel.primaryCaret.moveToLogicalPosition(
                 LogicalPosition(it.row(), it.col())
             )
         }
+    }
+
+    @HandlesEvent fun modeInfoSet(event: ModeInfoSetEvent) {
+        modes = event.value[0].modes
+    }
+
+    @HandlesEvent fun modeChange(event: ModeChangeEvent) {
+        modes[event.value[0].modeIndex].let {
+            mode = it
+            updateCursor(it)
+        }
+    }
+
+    private fun updateCursor(mode: ModeInfo) {
+        val useBlock = (mode.cursorShape == ModeInfo.CursorShape.BLOCK)
+        editor.settings.isBlockCursor = useBlock
     }
 
     internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {

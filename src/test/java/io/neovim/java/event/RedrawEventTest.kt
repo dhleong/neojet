@@ -3,10 +3,12 @@ package io.neovim.java.event
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.neovim.java.NeovimAssertions.assertThat
 import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
 import io.neovim.java.event.redraw.UpdateColorEvent
 import io.neovim.java.rpc.NeovimObjectMapper
+import io.neovim.java.util.ModeInfo
 import org.junit.Before
 import org.junit.Test
 
@@ -66,6 +68,37 @@ class RedrawEventTest {
         assertThat(put.value[0])
             .hasFirst(42)
             .hasSecond(9001)
+    }
+
+    @Test fun readModeInfo() {
+        val event = mapper.readValue(
+            """
+            |[2,
+            | "redraw",
+            | [["mode_info_set",
+            |   [true,
+            |    [{"name": "mighty fine",
+            |      "short_name": "shindig",
+            |      "cursor_shape": "vertical",
+            |      "new_property": "ignoreme"}]]]
+            | ]
+            |]
+            """.trimMargin(),
+            RedrawEvent::class.java
+        )
+
+        assertThat(event.args).hasSize(1)
+
+        assertThat(event.args[0])
+            .isInstanceOf(ModeInfoSetEvent::class.java)
+
+        val e = event.args[0] as ModeInfoSetEvent
+        assertThat(e.value).hasSize(1)
+
+        val modes = e.value[0].modes
+        assertThat(modes).hasSize(1)
+        assertThat(modes[0].shortName).isEqualTo("shindig")
+        assertThat(modes[0].cursorShape).isEqualTo(ModeInfo.CursorShape.VERTICAL)
     }
 
     @Test fun readUpdateColor() {

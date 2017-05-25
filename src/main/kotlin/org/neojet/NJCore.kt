@@ -45,8 +45,6 @@ class NJCore : ApplicationComponent, Disposable {
     override fun disposeComponent() {
         nvim?.close()
         nvim = null
-
-//        TypedActionFacade.Instance.restoreHandler()
     }
 
     override fun dispose() {

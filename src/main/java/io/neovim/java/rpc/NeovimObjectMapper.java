@@ -2,7 +2,9 @@ package io.neovim.java.rpc;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import io.neovim.java.Rpc;
 import io.neovim.java.event.EventsManager;
 import io.neovim.java.rpc.impl.NeovimExtensionTypes;
@@ -40,6 +42,8 @@ public class NeovimObjectMapper {
         );
 
         ObjectMapper mapper = new ObjectMapper(factory);
+        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         mapper.registerModule(module);
         return mapper;
     }

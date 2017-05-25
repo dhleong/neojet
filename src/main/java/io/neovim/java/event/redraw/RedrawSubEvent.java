@@ -56,6 +56,8 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
     public static class Deserializer extends StdDeserializer<RedrawSubEvent<?>> {
         static final Class<?>[] KNOWN_EVENTS = {
             CursorGotoEvent.class,
+            ModeChangeEvent.class,
+            ModeInfoSetEvent.class,
             PutEvent.class,
             UpdateColorEvent.class,
         };
@@ -89,13 +91,12 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
                 throw new JsonParseException(p, "Unable to read event!?");
             }
             Class<?> type = resolveType(event);
-//            System.out.println("!!! READ " + event + " AS " + type);
 
             RedrawSubEvent<?> result;
             try {
                 result = (RedrawSubEvent<?>) type.newInstance();
             } catch (InstantiationException | IllegalAccessException e) {
-                throw new JsonParseException(p, "Errr", e);
+                throw new JsonParseException(p, "Unable to instantiate " + type, e);
             }
 
             result.redrawType = event;
@@ -114,9 +115,6 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
             }
 
             result.value = valueList;
-
-//            System.out.println("!!! READ " + event + " AS " + type + " ->> " + result);
-//            System.err.println();
             return result;
         }
 
