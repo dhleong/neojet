@@ -86,7 +86,7 @@ public class Rpc implements Closeable {
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())
-            .replay(1, TimeUnit.SECONDS)
+            .replay(5, TimeUnit.SECONDS)
             .refCount();
 
         // internal subscriptions

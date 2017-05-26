@@ -17,6 +17,7 @@ import io.neovim.java.Buffer
 import io.neovim.java.IntPair
 import org.neojet.NVIM_BUFFER_KEY
 import java.awt.Font
+import javax.swing.JComponent
 
 /**
  * @author dhleong
@@ -40,15 +41,39 @@ val Editor.disposable: Disposable
 fun Editor.getLineEndOffset(line: Int): Int =
     logicalPositionToOffset(LogicalPosition(line + 1, 0)) - 1
 
+/**
+ * @return an IntPair representing the width and height
+ *  of the text component in cells
+ */
+fun Editor.getTextCells(): IntPair {
+    val (textWidth, textHeight) = component.textDimensions
+
+    return IntPair(
+        maxOf(60, contentComponent.width / textWidth),
+        maxOf(25, contentComponent.height / textHeight)
+    )
+}
+
 fun Editor.lineRange(line: Int): IntPair {
     val thisLineStartOffset = logicalPositionToOffset(LogicalPosition(line, 0))
-    val nextLineStartOffset = getLineEndOffset(line)
+    val nextLineStartOffset = minOf(getLineEndOffset(line), document.textLength - 1)
+
 
     return IntPair(
         thisLineStartOffset,
         nextLineStartOffset
     )
 }
+
+val JComponent.textDimensions: IntPair
+    get() {
+        val font = getEditorFont()
+        val fontMetrics = getFontMetrics(font)
+        return IntPair(
+            fontMetrics.charWidth('M'),
+            fontMetrics.height
+        )
+    }
 
 fun getEditorFont(): Font {
     // NOTE: sadly, neovim disabled the guifont option, but we can

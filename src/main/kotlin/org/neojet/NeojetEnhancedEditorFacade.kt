@@ -22,11 +22,14 @@ import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getLineEndOffset
+import org.neojet.util.getTextCells
 import org.neojet.util.inWriteAction
 import org.neojet.util.input
 import org.neojet.util.runUndoTransparently
 import java.awt.Component
 import java.awt.KeyEventDispatcher
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 
@@ -85,7 +88,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
-    val nvim: Neovim = NJCore.instance.attach(editor)
+    var cells = editor.getTextCells()
+
+    val nvim: Neovim = NJCore.instance.attach(editor, this)
     val subs = CompositeDisposable()
     val dispatcher = EventDispatcher(this)
 
@@ -98,6 +103,11 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
     init {
         editor.caretModel.addCaretListener(caretMovedListener)
+        editor.contentComponent.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent?) {
+                nvim.current.bufferSet(editor.buffer).subscribe()
+            }
+        })
 
         subs.add(
             nvim.bufferedRedrawEvents()
@@ -112,11 +122,12 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     }
 
     fun dispatchTypedKey(e: KeyEvent) {
-        val buffer = editor.buffer
+//        val buffer = editor.buffer
+//        nvim.current.bufferSet(buffer)
+//            .flatMap { nvim.input(e) }
+//            .subscribe()
 
-        nvim.current.bufferSet(buffer)
-            .flatMap { nvim.input(e) }
-            .subscribe()
+        nvim.input(e).subscribe()
     }
 
     /*
@@ -126,8 +137,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
-        val start = editor.caretModel.primaryCaret.offset
-        val line = editor.offsetToLogicalPosition(start).line
+        val line = cursorCol
+        val start = editor.logicalPositionToOffset(LogicalPosition(cursorRow, cursorCol))
         val lineEndOffset = editor.getLineEndOffset(line)
         val end = minOf(
             editor.document.textLength - 1,
@@ -175,25 +186,43 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun put(event: PutEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
-        val start = editor.caretModel.primaryCaret.offset
-        val line = editor.offsetToLogicalPosition(start).line
+        val line = cursorRow
+        if (line >= cells.height() - 1) {
+            // status line or something
+            return
+        }
+
+        val lineText = event.bytesToCharSequence()
         val lineEndOffset = editor.getLineEndOffset(line)
+        val start = editor.logicalPositionToOffset(LogicalPosition(cursorRow, cursorCol))
         val delta = lineEndOffset - start
         val end = minOf(
             editor.document.textLength - 1,
             start + minOf(event.value.size, delta)
         )
 
-        if (end < start) {
+        if (lineEndOffset < start) {
             // usually for drawing status line, etc.
-//            System.out.println("Ignore $event at $start (> $end)")
             return
         }
 
+//        if (end < start) {
+//            // usually for drawing status line, etc.
+////            System.out.println("Ignore $event at $start (> $end)")
+//            return
+//        }
+
         inWriteAction {
             runUndoTransparently {
-                System.out.println("REPLACE($start, $end) <- ${event.bytesToCharSequence()}")
-                editor.document.replaceString(start, end, event.bytesToCharSequence())
+
+                if (start == end) {
+                    System.out.println("INSERT($start) <- $lineText")
+                    editor.document.insertString(start, lineText)
+                } else {
+                    System.out.println("REPLACE($start, $end) <- $lineText")
+                    editor.document.replaceString(start, end, lineText)
+                }
+                cursorCol += event.value.size
             }
         }
     }

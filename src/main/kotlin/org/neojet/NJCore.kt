@@ -14,13 +14,11 @@ import io.neovim.java.Neovim
 import org.neojet.util.component1
 import org.neojet.util.component2
 import org.neojet.util.disposable
-import org.neojet.util.getEditorFont
 import org.neojet.util.vFile
 import java.awt.KeyboardFocusManager
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import java.util.logging.Logger
-import javax.swing.JComponent
 import kotlin.reflect.KProperty
 
 class NJCore : ApplicationComponent, Disposable {
@@ -95,13 +93,9 @@ class NJCore : ApplicationComponent, Disposable {
         throw IllegalStateException("No nvim")
     }
 
-    fun attach(editor: Editor): Neovim {
+    fun attach(editor: Editor, enhanced: NeojetEnhancedEditorFacade): Neovim {
         nvim?.let { nvim ->
-            val (textWidth, textHeight) = editor.component.textDimensions
-            uiAttach(nvim, editor, editor.document.vFile, IntPair(
-                maxOf(60, editor.component.width / textWidth),
-                maxOf(25, editor.component.height / textHeight)
-            ))
+            uiAttach(nvim, editor, editor.document.vFile, enhanced.cells)
 
             return nvim
         }
@@ -132,13 +126,4 @@ class NJCore : ApplicationComponent, Disposable {
 
 }
 
-private val JComponent.textDimensions: IntPair
-    get() {
-        val font = getEditorFont()
-        val fontMetrics = getFontMetrics(font)
-        return IntPair(
-            fontMetrics.charWidth('M'),
-            fontMetrics.height
-        )
-    }
 

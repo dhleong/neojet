@@ -55,4 +55,5 @@ public class NeovimTest extends EmbeddedNeovimTest {
             .hasAtLeastOneElementOfType(PutEvent.class)
             .hasAtLeastOneElementOfType(CursorGotoEvent.class);
     }
+
 }

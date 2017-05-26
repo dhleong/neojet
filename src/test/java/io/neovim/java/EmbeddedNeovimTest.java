@@ -32,4 +32,10 @@ public abstract class EmbeddedNeovimTest {
             nvim.command(command).blockingGet()
         ).isTrue();
     }
+
+    protected void nvimInput(String keys) {
+        assertThat(
+            nvim.input(keys).blockingGet()
+        ).isEqualTo(keys.length());
+    }
 }
