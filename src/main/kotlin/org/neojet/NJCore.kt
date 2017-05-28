@@ -11,6 +11,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.IntPair
 import io.neovim.java.Neovim
+import org.neojet.util.absoluteLocalFile
 import org.neojet.util.component1
 import org.neojet.util.component2
 import org.neojet.util.disposable
@@ -119,7 +120,7 @@ class NJCore : ApplicationComponent, Disposable {
                 .blockingGet()
         }
 
-        val filePath = vFile.path
+        val filePath = vFile.absoluteLocalFile.absolutePath
         nvim.command("e! $filePath").blockingGet()
         editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
     }

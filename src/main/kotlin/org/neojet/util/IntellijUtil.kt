@@ -12,11 +12,13 @@ import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Computable
 import com.intellij.openapi.util.Ref
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.Buffer
 import io.neovim.java.IntPair
 import org.neojet.NVIM_BUFFER_KEY
 import java.awt.Font
+import java.io.File
 import javax.swing.JComponent
 
 /**
@@ -74,6 +76,12 @@ val JComponent.textDimensions: IntPair
             fontMetrics.height
         )
     }
+
+/**
+ * @return A File pointing to this VirtualFile on disk
+ */
+val VirtualFile.absoluteLocalFile: File
+    get() = File(FileUtil.toSystemDependentName(this.path)).absoluteFile
 
 fun getEditorFont(): Font {
     // NOTE: sadly, neovim disabled the guifont option, but we can
