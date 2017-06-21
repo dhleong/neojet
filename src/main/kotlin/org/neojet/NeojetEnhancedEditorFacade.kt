@@ -5,6 +5,8 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.CaretAdapter
 import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.DocumentAdapter
+import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.project.DumbService
@@ -62,6 +64,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     val keyEventDispatcher: KeyEventDispatcher = KeyEventDispatcher {
         val isForOurComponent = it?.component?.belongsTo(editor.component) ?: false
         if (isForOurComponent && it.id == KeyEvent.KEY_TYPED) {
+            // FIXME should we just let it go through if in insert mode?
+            // FIXME That might be the more sane way to handle it, though
+            //  we'd lose vim iabbrevs....
             dispatchTypedKey(it)
             true // consume
         } else if (isForOurComponent) {
@@ -97,6 +102,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     internal lateinit var modes: List<ModeInfo>
     internal var mode: ModeInfo? = null
 
+    var editingDocumentFromVim = false
     var movingCursor = false
     var cursorRow: Int = 0
     var cursorCol: Int = 0
@@ -108,6 +114,19 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
                 nvim.current.bufferSet(editor.buffer).subscribe()
             }
         })
+
+        editor.document.addDocumentListener(object : DocumentAdapter() {
+            override fun documentChanged(e: DocumentEvent?) {
+                if (editingDocumentFromVim) return
+
+                e?.let {
+                    // TODO: IntelliJ edited the document unexpectedly
+                    System.out.println(
+                        "Document changed @${it.offset}: `${it.oldFragment}` -> `${it.newFragment}`")
+                    System.out.println("${it.oldLength} -> ${it.newLength}")
+                }
+            }
+        }, this)
 
         subs.add(
             nvim.bufferedRedrawEvents()
@@ -150,12 +169,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             return
         }
 
-        inWriteAction {
-            runUndoTransparently {
-                System.out.println("clearEol($start, $end)")
-                editor.document.deleteString(start, end)
-            }
-        }
+        System.out.println("clearEol($start, $end)")
+        editor.document.deleteString(start, end)
     }
 
     @HandlesEvent fun cursorMoved(event: CursorGotoEvent) {
@@ -179,6 +194,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun modeChange(event: ModeChangeEvent) {
         modes[event.value[0].modeIndex].let {
             mode = it
+
             updateCursor(it)
         }
     }
@@ -194,7 +210,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
         val lineText = event.bytesToCharSequence()
         val lineEndOffset = editor.getLineEndOffset(line)
-        val start = editor.logicalPositionToOffset(LogicalPosition(cursorRow, cursorCol))
+        val start = editor.logicalPositionToOffset(LogicalPosition(line, cursorCol))
         val delta = lineEndOffset - start
         val end = minOf(
             editor.document.textLength - 1,
@@ -203,28 +219,18 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
         if (lineEndOffset < start) {
             // usually for drawing status line, etc.
+            System.out.println("Ignore put @$line,$cursorCol")
             return
         }
 
-//        if (end < start) {
-//            // usually for drawing status line, etc.
-////            System.out.println("Ignore $event at $start (> $end)")
-//            return
-//        }
-
-        inWriteAction {
-            runUndoTransparently {
-
-                if (start == end) {
-                    System.out.println("INSERT($start) <- $lineText")
-                    editor.document.insertString(start, lineText)
-                } else {
-                    System.out.println("REPLACE($start, $end) <- $lineText")
-                    editor.document.replaceString(start, end, lineText)
-                }
-                cursorCol += event.value.size
-            }
+        if (start == end) {
+            System.out.println("INSERT($start) <- $lineText")
+            editor.document.insertString(start, lineText)
+        } else {
+            System.out.println("REPLACE($start, $end) <- $lineText")
+            editor.document.replaceString(start, end, lineText)
         }
+        cursorCol += event.value.size
     }
 
     private fun updateCursor(mode: ModeInfo) {
@@ -233,8 +239,21 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     }
 
     internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
-        events.forEach(dispatcher::dispatch)
+        editDocumentFromVim {
+            events.forEach(dispatcher::dispatch)
+        }
     }
+
+    private inline fun editDocumentFromVim(crossinline edits: () -> Unit) {
+        editingDocumentFromVim = true
+        inWriteAction {
+            runUndoTransparently {
+                edits()
+            }
+        }
+        editingDocumentFromVim = false
+    }
+
 }
 
 
@@ -255,3 +274,4 @@ private fun Component.belongsTo(parentMaybe: JComponent): Boolean {
 
     return false
 }
+

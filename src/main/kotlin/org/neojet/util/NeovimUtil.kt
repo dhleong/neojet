@@ -6,7 +6,6 @@ import io.neovim.java.event.redraw.RedrawSubEvent
 import io.reactivex.Flowable
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
-import org.neojet.gui.UiThreadScheduler
 import java.awt.event.KeyEvent
 import java.util.Collections
 import java.util.concurrent.TimeUnit
@@ -17,7 +16,7 @@ import java.util.concurrent.TimeUnit
 
 fun Neovim.bufferedRedrawEvents(): Flowable<List<RedrawSubEvent<*>>> {
     return notifications(RedrawEvent::class.java)
-        .window(4, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
+        .window(10, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
         // buffer into a List, but assuming either an empty or singleton
         // list where possible to avoid unnecessary allocations
 
@@ -35,7 +34,6 @@ fun Neovim.bufferedRedrawEvents(): Flowable<List<RedrawSubEvent<*>>> {
         }
 
         .filter { it.isNotEmpty() }
-        .observeOn(UiThreadScheduler.instance)
 }
 
 // TODO special keys? modifiers?

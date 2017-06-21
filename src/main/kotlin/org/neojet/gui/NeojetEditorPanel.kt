@@ -45,6 +45,7 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     init {
         subs.addAll(
             nvim.bufferedRedrawEvents()
+                .observeOn(UiThreadScheduler.instance)
                 .subscribe(this::dispatchRedrawEvents)
         )
 

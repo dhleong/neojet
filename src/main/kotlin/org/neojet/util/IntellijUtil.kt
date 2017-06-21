@@ -118,7 +118,7 @@ fun runUndoTransparently(action: () -> Unit) {
  *  thread, waiting for the result
  */
 fun <T> inWriteAction(action: () -> T): T =
-    inWriteAction(ModalityState.defaultModalityState(), action)
+    inWriteAction(ModalityState.NON_MODAL, action)
 
 fun <T> inWriteAction(modality: ModalityState, action: () -> T): T {
     val wrapped = asWriteAction(action)

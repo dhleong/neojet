@@ -98,6 +98,10 @@ class NJCore : ApplicationComponent, Disposable {
         nvim?.let { nvim ->
             uiAttach(nvim, editor, editor.document.vFile, enhanced.cells)
 
+            // attaching to enhanced editor? let's enforce some configs:
+            nvim.command("setlocal nolist") // or we could parse it and replace them...
+                .blockingGet()
+
             return nvim
         }
 
