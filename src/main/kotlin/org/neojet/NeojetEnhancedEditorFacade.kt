@@ -19,12 +19,16 @@ import io.neovim.java.event.redraw.ModeChangeEvent
 import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.RedrawSubEvent
+import io.neovim.java.event.redraw.ScrollEvent
+import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getLineEndOffset
+import org.neojet.util.getLineStartOffset
 import org.neojet.util.getTextCells
+import org.neojet.util.getTextRange
 import org.neojet.util.inWriteAction
 import org.neojet.util.input
 import org.neojet.util.runUndoTransparently
@@ -106,6 +110,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     var movingCursor = false
     var cursorRow: Int = 0
     var cursorCol: Int = 0
+
+    private var currentScrollRegion: SetScrollRegionEvent.ScrollRegion =
+        SetScrollRegionEvent.ScrollRegion()
 
     init {
         editor.caretModel.addCaretListener(caretMovedListener)
@@ -203,13 +210,18 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
         val line = cursorRow
-        if (line >= cells.height() - 1) {
-            // status line or something
+        val statusLineIndex = cells.height() - 1
+        if (line == statusLineIndex) {
+            // TODO deal with status line?
+            return
+        } else if (line > statusLineIndex) {
+            // ??
+            System.out.println("Drop put @$line (cells.height=${cells.height()})")
             return
         }
 
         val lineText = event.bytesToCharSequence()
-        val lineEndOffset = editor.getLineEndOffset(line)
+        val lineEndOffset = editor.getLineEndOffset(line, clamp = false)
         val start = editor.logicalPositionToOffset(LogicalPosition(line, cursorCol))
         val delta = lineEndOffset - start
         val end = minOf(
@@ -219,11 +231,13 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
         if (lineEndOffset < start) {
             // usually for drawing status line, etc.
-            System.out.println("Ignore put @$line,$cursorCol")
+            System.out.println("Ignore put @$line,$cursorCol: `$lineText`")
             return
         }
 
-        if (start == end) {
+        if (start >= editor.document.textLength - 2 && lineText.startsWith("~")) {
+            editor.document.deleteString(start, end)
+        } else if (start == end) {
             System.out.println("INSERT($start) <- $lineText")
             editor.document.insertString(start, lineText)
         } else {
@@ -231,6 +245,48 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             editor.document.replaceString(start, end, lineText)
         }
         cursorCol += event.value.size
+    }
+
+    @HandlesEvent fun scroll(event: ScrollEvent) {
+        for (scroll in event.value) {
+            val scrollAmount = scroll.value
+
+            val range = editor.getTextRange(currentScrollRegion)
+            val scrollRegionText = editor.document.getText(range)
+
+            val dstTop = currentScrollRegion.top - scrollAmount
+            val dstBot = currentScrollRegion.bottom - scrollAmount
+
+            val dstTopOffset = editor.getLineStartOffset(dstTop)
+            val dstBotOffset = editor.getLineEndOffset(dstBot)
+
+            // move the scroll region
+            editor.document.replaceString(dstTopOffset, dstBotOffset, scrollRegionText)
+            System.out.println("Move `$scrollRegionText` by $scrollAmount")
+
+            // clean up where we left
+            val clearTop: Int
+            val clearBot: Int
+            if (scrollAmount < 0) {
+                // scrolling down; clean up above
+                clearTop = range.startOffset // currentScrollRegion.top
+                clearBot = dstTopOffset
+            } else {
+                // scrolling up; clean below
+                clearTop = dstBotOffset
+                clearBot = range.endOffset // currentScrollRegion.bottom
+            }
+
+            // replace the region with a number of blank lines equal to the number of lines scrolled
+            editor.document.replaceString(
+                clearTop, clearBot,
+                "\n".repeat(Math.abs(scrollAmount))
+            )
+        }
+    }
+
+    @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
+        currentScrollRegion = event.value.last()
     }
 
     private fun updateCursor(mode: ModeInfo) {

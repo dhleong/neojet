@@ -12,10 +12,12 @@ import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Computable
 import com.intellij.openapi.util.Ref
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.Buffer
 import io.neovim.java.IntPair
+import io.neovim.java.event.redraw.SetScrollRegionEvent
 import org.neojet.NVIM_BUFFER_KEY
 import java.awt.Font
 import java.io.File
@@ -40,8 +42,24 @@ val Editor.disposable: Disposable
         throw IllegalArgumentException("$this doesn't have a Disposable")
     }
 
-fun Editor.getLineEndOffset(line: Int): Int =
-    logicalPositionToOffset(LogicalPosition(line + 1, 0)) - 1
+fun Editor.getLineEndOffset(line: Int, clamp: Boolean = true): Int {
+    val actual = logicalPositionToOffset(LogicalPosition(line + 1, 0)) - 1
+    if (clamp) return minOf(actual, document.textLength - 1)
+    return actual
+}
+
+fun Editor.getLineStartOffset(line: Int): Int =
+    minOf(
+        logicalPositionToOffset(LogicalPosition(line, 0)),
+        document.textLength - 1
+    )
+
+
+fun Editor.getTextRange(region: SetScrollRegionEvent.ScrollRegion) =
+    TextRange(
+        getLineStartOffset(region.top),
+        getLineEndOffset(region.bottom)
+    )
 
 /**
  * @return an IntPair representing the width and height
@@ -57,7 +75,7 @@ fun Editor.getTextCells(): IntPair {
 }
 
 fun Editor.lineRange(line: Int): IntPair {
-    val thisLineStartOffset = logicalPositionToOffset(LogicalPosition(line, 0))
+    val thisLineStartOffset = getLineStartOffset(line)
     val nextLineStartOffset = minOf(getLineEndOffset(line), document.textLength - 1)
 
 
