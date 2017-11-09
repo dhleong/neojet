@@ -167,9 +167,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
-        val line = cursorCol // FIXME this doesn't look right
-        val start = editor.logicalPositionToOffset(LogicalPosition(cursorRow, cursorCol))
-        val lineEndOffset = editor.getLineEndOffset(line)
+        val logicalPosition = getLogicalPosition()
+        val start = editor.logicalPositionToOffset(logicalPosition)
+        val lineEndOffset = editor.getLineEndOffset(logicalPosition.line)
         val end = minOf(
             editor.document.textLength - 1,
             lineEndOffset
@@ -192,7 +192,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             cursorCol = it.col()
             System.out.println("CursorGoto($cursorRow, $cursorCol)")
 
-            val newLogicalPosition = LogicalPosition(cursorRow, cursorCol)
+            val newLogicalPosition = getLogicalPosition()
 
             val lineEndOffset = editor.getLineEndOffset(newLogicalPosition.line)
             val lineLength = lineEndOffset - editor.getLineStartOffset(newLogicalPosition.line)
@@ -302,6 +302,9 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
     }
+
+    // Is this sufficient?
+    private fun getLogicalPosition() = LogicalPosition(cursorRow, cursorCol)
 
     private fun updateCursor(mode: ModeInfo) {
         val useBlock = (mode.cursorShape == ModeInfo.CursorShape.BLOCK)
