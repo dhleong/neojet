@@ -83,16 +83,20 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     }
 
     val caretMovedListener = object : CaretAdapter() {
-        override fun caretPositionChanged(e: CaretEvent?) {
-            if (e != null && !movingCursor) {
-                val line = e.newPosition.line + 1 // 0-indexed to 1-indexed
-                val column = e.newPosition.column
+        override fun caretPositionChanged(ev: CaretEvent?) {
+            if (ev != null && !movingCursor) {
+                val line = ev.newPosition.line + 1 // 0-indexed to 1-indexed
+                val column = ev.newPosition.column
 
                 nvim.current.window()
                     .flatMap { window ->
                         window.setCursor(line, column)
                     }
-                    .subscribe()
+                    .subscribe { _, e ->
+                        if (e != null) {
+                            System.err.println("ERR setting cursor: $e")
+                        }
+                    }
             }
         }
     }
@@ -163,7 +167,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
-        val line = cursorCol
+        val line = cursorCol // FIXME this doesn't look right
         val start = editor.logicalPositionToOffset(LogicalPosition(cursorRow, cursorCol))
         val lineEndOffset = editor.getLineEndOffset(line)
         val end = minOf(
@@ -186,9 +190,19 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         event.value[0].let {
             cursorRow = it.row()
             cursorCol = it.col()
-            editor.caretModel.primaryCaret.moveToLogicalPosition(
-                LogicalPosition(cursorRow, cursorCol)
-            )
+            System.out.println("CursorGoto($cursorRow, $cursorCol)")
+
+            val newLogicalPosition = LogicalPosition(cursorRow, cursorCol)
+
+            val lineEndOffset = editor.getLineEndOffset(newLogicalPosition.line)
+            val lineLength = lineEndOffset - editor.getLineStartOffset(newLogicalPosition.line)
+            val endDiff = cursorCol - lineLength
+            if (endDiff > 0) {
+                // this implies inserting spaces
+                editor.document.insertString(lineEndOffset, " ".repeat(endDiff))
+            }
+
+            editor.caretModel.primaryCaret.moveToLogicalPosition(newLogicalPosition)
         }
 
         movingCursor = false

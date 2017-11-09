@@ -40,7 +40,8 @@ repositories {
 }
 
 ext.vs = [
-    msgpack: '0.8.12'
+    msgpack: '0.8.12',
+    rxjava: '2.1.6',
 ]
 
 dependencies {
@@ -49,7 +50,7 @@ dependencies {
 
     compile "org.msgpack:msgpack-core:${vs.msgpack}"
     compile "org.msgpack:jackson-dataformat-msgpack:${vs.msgpack}"
-    compile 'io.reactivex.rxjava2:rxjava:2.1.0'
+    compile "io.reactivex.rxjava2:rxjava:${vs.rxjava}"
 
     compile 'com.tspoon.traceur:traceur:1.0.1'
 

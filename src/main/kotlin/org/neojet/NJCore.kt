@@ -54,7 +54,11 @@ class NJCore : ApplicationComponent, Disposable {
 //        Traceur.enableLogging()
 
         try {
-            nvim = Neovim.attachEmbedded()
+//            nvim = Neovim.attachEmbedded()
+
+            // NOTE: this is for testing. Run nvim like this:
+            //  $ NVIM_LISTEN_ADDRESS=127.0.0.1:6666 nvim
+            nvim = Neovim.attachSocket("127.0.0.1", 7777)
         } catch (e: Throwable) {
             logger.log(Level.WARNING,
                 "Unable to initialize Neovim connection. Is it installed?",

@@ -15,7 +15,7 @@ class UiThreadScheduler : Scheduler() {
         val instance: UiThreadScheduler by lazy { UiThreadScheduler() }
     }
 
-    override fun scheduleDirect(run: Runnable?): Disposable {
+    override fun scheduleDirect(run: Runnable): Disposable {
         val scheduled = ScheduledRunnable(
                 RxJavaPlugins.onSchedule(run)
         )
@@ -23,10 +23,10 @@ class UiThreadScheduler : Scheduler() {
         return scheduled
     }
 
-    override fun scheduleDirect(run: Runnable?, delay: Long, unit: TimeUnit?): Disposable {
+    override fun scheduleDirect(run: Runnable, delay: Long, unit: TimeUnit): Disposable {
         val timed = TimedRunnable(
                 RxJavaPlugins.onSchedule(run),
-                unit?.toMillis(delay)?.toInt() ?: 0
+                unit.toMillis(delay).toInt()
         )
         timed.timer.start()
         return timed
@@ -40,7 +40,7 @@ class UiThreadScheduler : Scheduler() {
 
         override fun isDisposed(): Boolean = disposed
 
-        override fun schedule(run: Runnable?, delay: Long, unit: TimeUnit?): Disposable =
+        override fun schedule(run: Runnable, delay: Long, unit: TimeUnit): Disposable =
                 scheduler.scheduleDirect(run, delay, unit)
 
         override fun dispose() {
