@@ -262,45 +262,54 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     }
 
     @HandlesEvent fun scroll(event: ScrollEvent) {
+        val region = currentScrollRegion
         for (scroll in event.value) {
             val scrollAmount = scroll.value
 
-            val range = editor.getTextRange(currentScrollRegion)
+            val range = editor.getTextRange(region)
             val scrollRegionText = editor.document.getText(range)
 
-            val dstTop = currentScrollRegion.top - scrollAmount
-            val dstBot = currentScrollRegion.bottom - scrollAmount
+            val dstTop = region.top - scrollAmount
+            val dstBot = region.bottom - scrollAmount
 
             val dstTopOffset = editor.getLineStartOffset(dstTop)
             val dstBotOffset = editor.getLineEndOffset(dstBot)
 
             // move the scroll region
             editor.document.replaceString(dstTopOffset, dstBotOffset, scrollRegionText)
-            System.out.println("Move `$scrollRegionText` by $scrollAmount")
+            System.out.println("Move (by $scrollAmount) `$scrollRegionText`")
+            System.out.flush()
 
             // clean up where we left
             val clearTop: Int
             val clearBot: Int
             if (scrollAmount < 0) {
                 // scrolling down; clean up above
-                clearTop = range.startOffset // currentScrollRegion.top
+                clearTop = range.startOffset // region.top
                 clearBot = dstTopOffset
             } else {
                 // scrolling up; clean below
                 clearTop = dstBotOffset
-                clearBot = range.endOffset // currentScrollRegion.bottom
+                clearBot = range.endOffset // region.bottom
             }
 
-            // replace the region with a number of blank lines equal to the number of lines scrolled
-            editor.document.replaceString(
-                clearTop, clearBot,
-                "\n".repeat(Math.abs(scrollAmount))
-            )
+            try {
+                // replace the region with a number of blank lines equal to the number of lines scrolled
+                editor.document.replaceString(
+                    clearTop, clearBot,
+                    "\n".repeat(Math.abs(scrollAmount))
+                )
+            } catch (e: Exception) {
+                System.err.println("---- ERRR ----")
+                e.printStackTrace()
+                System.err.println("--------------")
+            }
         }
     }
 
     @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
+        System.out.println("setScrollRegion: $currentScrollRegion")
     }
 
     // Is this sufficient?

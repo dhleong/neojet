@@ -11,12 +11,15 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.IntPair
 import io.neovim.java.Neovim
+import io.neovim.java.Rpc
 import org.neojet.util.absoluteLocalFile
 import org.neojet.util.component1
 import org.neojet.util.component2
 import org.neojet.util.disposable
 import org.neojet.util.vFile
 import java.awt.KeyboardFocusManager
+import java.io.InputStream
+import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -33,6 +36,8 @@ class NJCore : ApplicationComponent, Disposable {
                     as NJCore
             }
         }
+
+        var isTestMode: Boolean = false
     }
     val logger = Logger.getLogger("NeoJet:NJCore")!!
 
@@ -52,6 +57,8 @@ class NJCore : ApplicationComponent, Disposable {
 
     override fun initComponent() {
 //        Traceur.enableLogging()
+
+        if (isTestMode) return
 
         try {
 //            nvim = Neovim.attachEmbedded()
@@ -109,7 +116,30 @@ class NJCore : ApplicationComponent, Disposable {
             return nvim
         }
 
-        throw IllegalStateException("No nvim")
+        if (!isTestMode) {
+            throw IllegalStateException("No nvim")
+        }
+
+        return Neovim.attach(Rpc.create(object : Rpc.Channel {
+            override fun tryOpen() { }
+
+            override fun getInputStream(): InputStream =
+                object : InputStream() {
+                    override fun read() = -1
+                }
+
+            override fun getErrorStream(): InputStream =
+                object : InputStream() {
+                    override fun read() = -1
+                }
+
+            override fun getOutputStream(): OutputStream =
+                object : OutputStream() {
+                    override fun write(b: Int) { }
+                }
+
+            override fun close() { }
+        }))
     }
 
     private fun uiAttach(nvim: Neovim, editor: Editor, vFile: VirtualFile, windowSize: IntPair) {

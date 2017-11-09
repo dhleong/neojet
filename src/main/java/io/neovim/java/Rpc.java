@@ -257,7 +257,7 @@ public class Rpc implements Closeable {
         Traceur.enableLogging();
         return Flowable.create(emitter -> {
             if (reading.getAndSet(true)) {
-                System.err.println("observeIncoming" + emitter.getClass() + "@" + emitter.hashCode());
+                System.err.println("observeIncoming " + emitter.getClass() + "@" + emitter.hashCode());
 //                Thread.dumpStack();
                 emitter.onError(
                     new IllegalStateException("Multiple readers")
@@ -276,13 +276,17 @@ public class Rpc implements Closeable {
                 }
 
             } catch (IOException e) {
-                closingLatch.countDown();
-                emitter.onError(e);
-                return;
+                if (!e.getMessage().contains("end-of-input")) {
+                    closingLatch.countDown();
+                    emitter.onError(e);
+                    reading.set(false);
+                    return;
+                }
             }
 
             emitter.onComplete();
             closingLatch.countDown();
+            reading.set(false);
 
         }, BackpressureStrategy.BUFFER);
     }

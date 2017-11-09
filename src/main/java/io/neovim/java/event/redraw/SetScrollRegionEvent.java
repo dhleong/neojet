@@ -3,6 +3,8 @@ package io.neovim.java.event.redraw;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.neovim.java.event.EventName;
 
+import java.util.Collections;
+
 /**
  * @author dhleong
  */
@@ -16,6 +18,16 @@ public class SetScrollRegionEvent extends RedrawSubEvent<SetScrollRegionEvent.Sc
         public int left;
         public int right;
 
+        public ScrollRegion() {}
+        public ScrollRegion(int left, int top, int right, int bottom) {
+            this();
+
+            this.left = left;
+            this.top = top;
+            this.right = right;
+            this.bottom = bottom;
+        }
+
         @Override
         public String toString() {
             return "ScrollRegion{" +
@@ -25,6 +37,15 @@ public class SetScrollRegionEvent extends RedrawSubEvent<SetScrollRegionEvent.Sc
                 ", right=" + right +
                 '}';
         }
+    }
+
+    public SetScrollRegionEvent() {}
+    public SetScrollRegionEvent(int left, int top, int right, int bottom) {
+        this();
+
+        value = Collections.singletonList(new ScrollRegion(
+            left, top, right, bottom
+        ));
     }
 
     @Override
