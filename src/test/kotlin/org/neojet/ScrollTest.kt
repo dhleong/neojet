@@ -14,18 +14,20 @@ class ScrollTest : NeojetTestCase() {
                 }
 
             }
-        """.trimMargin(),
+        """.trimIndent(),
 
         after = """
             class Test {
                 void foo() {
                 }
             }
-        """.trimMargin()) {
+
+        """.trimIndent()) {
+        // TODO the extra line after is probably incorrect...
 
         // test
         facade.setScrollRegion(SetScrollRegionEvent(
-            0, 3, 22, 4
+            0, 3, 59, 22
         ))
 
         facade.scroll(ScrollEvent(1))

@@ -8,6 +8,7 @@ import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.ex.util.EditorUtil.getEditorFont
 import com.intellij.openapi.editor.impl.EditorImpl
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Computable
@@ -17,6 +18,7 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.Buffer
 import io.neovim.java.IntPair
+import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
 import org.neojet.NVIM_BUFFER_KEY
 import java.awt.Font
@@ -55,11 +57,24 @@ fun Editor.getLineStartOffset(line: Int): Int =
     )
 
 
-fun Editor.getTextRange(region: SetScrollRegionEvent.ScrollRegion) =
+fun Editor.getTextRange(
+    region: SetScrollRegionEvent.ScrollRegion,
+    scroll: ScrollEvent.ScrollValue
+) = if (scroll.value > 0) {
+    // scrolling up; top lines moving out of the region get truncated
+    TextRange(
+        getLineStartOffset(region.top + scroll.value),
+        getLineEndOffset(region.bottom) + 1
+    )
+} else {
+    // scrolling down; bottom lines get truncated
+    // Yes, we could avoid the if() and use max/min, but
+    //  this code is easier to reason about and understand
     TextRange(
         getLineStartOffset(region.top),
-        getLineEndOffset(region.bottom)
+        getLineEndOffset(region.bottom - scroll.value)
     )
+}
 
 /**
  * @return an IntPair representing the width and height

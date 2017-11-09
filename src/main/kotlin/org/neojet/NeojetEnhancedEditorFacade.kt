@@ -37,6 +37,7 @@ import java.awt.KeyEventDispatcher
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
+import java.lang.Math.abs
 import javax.swing.JComponent
 
 /**
@@ -249,6 +250,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             return
         }
 
+        // TODO better checking for deletes at end of document
         if (start >= editor.document.textLength - 2 && lineText.startsWith("~")) {
             editor.document.deleteString(start, end)
         } else if (start == end) {
@@ -266,44 +268,27 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         for (scroll in event.value) {
             val scrollAmount = scroll.value
 
-            val range = editor.getTextRange(region)
-            val scrollRegionText = editor.document.getText(range)
+            val range = editor.getTextRange(region, scroll)
+            val scrollRegionText = StringBuilder(editor.document.getText(range))
 
-            val dstTop = region.top - scrollAmount
-            val dstBot = region.bottom - scrollAmount
+            val dstTop = region.top
+            val dstBot = region.bottom
 
             val dstTopOffset = editor.getLineStartOffset(dstTop)
-            val dstBotOffset = editor.getLineEndOffset(dstBot)
+            val dstBotOffset = editor.getLineEndOffset(dstBot) + 1
+
+            System.out.println("Move (by $scrollAmount) `$scrollRegionText`")
+
+            if (scrollAmount > 0) {
+                // scrolling up; add lines below
+                scrollRegionText.append("\n".repeat(scrollAmount))
+            } else {
+                // scrolling down; insert lines above
+                scrollRegionText.insert(0, "\n".repeat(abs(scrollAmount)))
+            }
 
             // move the scroll region
             editor.document.replaceString(dstTopOffset, dstBotOffset, scrollRegionText)
-            System.out.println("Move (by $scrollAmount) `$scrollRegionText`")
-            System.out.flush()
-
-            // clean up where we left
-            val clearTop: Int
-            val clearBot: Int
-            if (scrollAmount < 0) {
-                // scrolling down; clean up above
-                clearTop = range.startOffset // region.top
-                clearBot = dstTopOffset
-            } else {
-                // scrolling up; clean below
-                clearTop = dstBotOffset
-                clearBot = range.endOffset // region.bottom
-            }
-
-            try {
-                // replace the region with a number of blank lines equal to the number of lines scrolled
-                editor.document.replaceString(
-                    clearTop, clearBot,
-                    "\n".repeat(Math.abs(scrollAmount))
-                )
-            } catch (e: Exception) {
-                System.err.println("---- ERRR ----")
-                e.printStackTrace()
-                System.err.println("--------------")
-            }
         }
     }
 
