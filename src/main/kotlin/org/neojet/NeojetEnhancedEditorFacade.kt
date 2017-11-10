@@ -32,6 +32,7 @@ import org.neojet.util.getTextCells
 import org.neojet.util.getTextRange
 import org.neojet.util.inWriteAction
 import org.neojet.util.input
+import org.neojet.util.lastLine
 import org.neojet.util.runUndoTransparently
 import java.awt.Component
 import java.awt.KeyEventDispatcher
@@ -233,6 +234,12 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             return
         }
 
+        if (line > editor.lastLine
+                && event.value.none { it.value !in setOf('~', '\n') }) {
+            System.out.println("Ignore 'no line' placeholders")
+            return
+        }
+
         val lineText = event.bytesToCharSequence()
         val lineEndOffset = editor.getLineEndOffset(line, clamp = false)
         val start = editor.logicalPositionToOffset(LogicalPosition(line, cursorCol))
@@ -242,6 +249,13 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             start + minOf(event.value.size, delta)
         )
 
+        if (lineText.matches(Regex("~[ ]+$"))) {
+            // delete start - 1 to get the \n
+            System.out.println("DELETE LINE @$line")
+            editor.document.deleteString(maxOf(0, start - 1), end)
+            return
+        }
+
         if (lineEndOffset < start) {
             // usually for drawing status line, etc.
             System.out.println("Ignore put @$line,$cursorCol: `$lineText`")
@@ -249,10 +263,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
 
         // TODO better checking for deletes at end of document
-        if (start >= editor.document.textLength - 2 && lineText.startsWith("~")) {
-            editor.document.deleteString(start, end)
-        } else if (start == end) {
-            System.out.println("INSERT($start) <- $lineText")
+        if (start == end) {
+            System.out.println("INSERT($start) <- `$lineText`")
             editor.document.insertString(start, lineText)
         } else {
             System.out.println("REPLACE($start, $end) <- $lineText")

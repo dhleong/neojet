@@ -44,6 +44,9 @@ val Editor.disposable: Disposable
         throw IllegalArgumentException("$this doesn't have a Disposable")
     }
 
+val Editor.lastLine: Int
+    get() = document.lineCount -1
+
 fun Editor.getLineEndOffset(line: Int, clamp: Boolean = true): Int {
     val actual = logicalPositionToOffset(LogicalPosition(line + 1, 0)) - 1
     if (clamp) return minOf(actual, document.textLength - 1)
