@@ -22,6 +22,7 @@ import io.neovim.java.event.redraw.RedrawSubEvent
 import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.util.ModeInfo
+import io.reactivex.Single
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
@@ -38,13 +39,14 @@ import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
 import java.lang.Math.abs
+import java.util.logging.Logger
 import javax.swing.JComponent
 
 /**
  * @author dhleong
  */
 
-val NEOJET_ENHANCED_EDITOR = Key<NeojetEnhancedEditorFacade>("org.neojet.enhancedEditor")
+val neojetEnhancedEditor = Key<NeojetEnhancedEditorFacade>("org.neojet.enhancedEditor")
 
 class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Disposable {
     companion object {
@@ -54,7 +56,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             }
 
             val facade = NeojetEnhancedEditorFacade(editor)
-            editor.putUserData(NEOJET_ENHANCED_EDITOR, facade)
+            editor.putUserData(neojetEnhancedEditor, facade)
 
             if (editor is EditorImpl) {
                 Disposer.register(editor.disposable, facade)
@@ -69,9 +71,6 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     val keyEventDispatcher: KeyEventDispatcher = KeyEventDispatcher {
         val isForOurComponent = it?.component?.belongsTo(editor.component) ?: false
         if (isForOurComponent && it.id == KeyEvent.KEY_TYPED) {
-            // FIXME should we just let it go through if in insert mode?
-            // FIXME That might be the more sane way to handle it, though
-            //  we'd lose vim iabbrevs....
             dispatchTypedKey(it)
             true // consume
         } else if (isForOurComponent) {
@@ -83,7 +82,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
-    val caretMovedListener = object : CaretAdapter() {
+    private val caretMovedListener = object : CaretAdapter() {
         override fun caretPositionChanged(ev: CaretEvent?) {
             if (ev != null && !movingCursor) {
                 val line = ev.newPosition.line + 1 // 0-indexed to 1-indexed
@@ -102,19 +101,21 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
+    private val logger = Logger.getLogger("NeoJet:EditorFacade")!!
+
     var cells = editor.getTextCells()
 
     val nvim: Neovim = NJCore.instance.attach(editor, this)
-    val subs = CompositeDisposable()
-    val dispatcher = EventDispatcher(this)
+    private val subs = CompositeDisposable()
+    private val dispatcher = EventDispatcher(this)
 
-    internal lateinit var modes: List<ModeInfo>
-    internal var mode: ModeInfo? = null
+    private lateinit var modes: List<ModeInfo>
+    private var mode: ModeInfo? = null
 
     var editingDocumentFromVim = false
     var movingCursor = false
-    var cursorRow: Int = 0
-    var cursorCol: Int = 0
+    private var cursorRow: Int = 0
+    private var cursorCol: Int = 0
 
     private var currentScrollRegion: SetScrollRegionEvent.ScrollRegion =
         SetScrollRegionEvent.ScrollRegion()
@@ -123,7 +124,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         editor.caretModel.addCaretListener(caretMovedListener)
         editor.contentComponent.addFocusListener(object : FocusAdapter() {
             override fun focusGained(e: FocusEvent?) {
-                nvim.current.bufferSet(editor.buffer).subscribe()
+                nvim.current.bufferSet(editor.buffer)
+                    .execAsync("set current buffer")
             }
         })
 
@@ -153,12 +155,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     }
 
     fun dispatchTypedKey(e: KeyEvent) {
-//        val buffer = editor.buffer
-//        nvim.current.bufferSet(buffer)
-//            .flatMap { nvim.input(e) }
-//            .subscribe()
-
-        nvim.input(e).subscribe()
+        nvim.input(e).execAsync("Dispatch key event")
     }
 
     /*
@@ -181,7 +178,6 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             return
         }
 
-        System.out.println("clearEol($start, $end)")
         editor.document.deleteString(start, end)
     }
 
@@ -193,17 +189,19 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             cursorCol = it.col()
             System.out.println("CursorGoto($cursorRow, $cursorCol)")
 
-            val newLogicalPosition = getLogicalPosition()
+            if (cursorInDocument) {
+                val newLogicalPosition = getLogicalPosition()
 
-            val lineEndOffset = editor.getLineEndOffset(newLogicalPosition.line)
-            val lineLength = lineEndOffset - editor.getLineStartOffset(newLogicalPosition.line)
-            val endDiff = cursorCol - lineLength
-            if (endDiff > 0) {
-                // this implies inserting spaces
-                editor.document.insertString(lineEndOffset, " ".repeat(endDiff))
+                val lineEndOffset = editor.getLineEndOffset(newLogicalPosition.line)
+                val lineLength = lineEndOffset - editor.getLineStartOffset(newLogicalPosition.line)
+                val endDiff = cursorCol - lineLength
+                if (endDiff > 0) {
+                    // this implies inserting spaces
+                    editor.document.insertString(lineEndOffset, " ".repeat(endDiff))
+                }
+
+                editor.caretModel.primaryCaret.moveToLogicalPosition(newLogicalPosition)
             }
-
-            editor.caretModel.primaryCaret.moveToLogicalPosition(newLogicalPosition)
         }
 
         movingCursor = false
@@ -225,11 +223,11 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
         val line = cursorRow
-        val statusLineIndex = cells.height() - 1
-        if (line == statusLineIndex) {
+        if (cursorOnStatusLine) {
             // TODO deal with status line?
+            System.out.println("Drop put @$line (cells.height=${cells.height()})")
             return
-        } else if (line > statusLineIndex) {
+        } else if (cursorOnExLine) {
             // ??
             System.out.println("Drop put @$line (cells.height=${cells.height()})")
             return
@@ -277,8 +275,6 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             val dstTopOffset = editor.getLineStartOffset(dstTop)
             val dstBotOffset = editor.getLineEndOffset(dstBot) + 1
 
-            System.out.println("Move (by $scrollAmount) `$scrollRegionText`")
-
             if (scrollAmount > 0) {
                 // scrolling up; add lines below
                 scrollRegionText.append("\n".repeat(scrollAmount))
@@ -294,8 +290,16 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
     @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
-        System.out.println("setScrollRegion: $currentScrollRegion")
     }
+
+    private val cursorInDocument: Boolean
+        get() = cursorRow < cells.height() - 2
+
+    private val cursorOnStatusLine: Boolean
+        get() = cursorRow == cells.height() - 2
+
+    private val cursorOnExLine: Boolean
+        get() = cursorRow == cells.height() - 1
 
     // Is this sufficient?
     private fun getLogicalPosition() = LogicalPosition(cursorRow, cursorCol)
@@ -305,7 +309,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         editor.settings.isBlockCursor = useBlock
     }
 
-    internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
+    private fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
         editDocumentFromVim {
             events.forEach(dispatcher::dispatch)
         }
@@ -321,6 +325,13 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         editingDocumentFromVim = false
     }
 
+    private fun <T> Single<T>.execAsync(label: String) {
+        subscribe { _, e ->
+            if (e != null) {
+                logger.severe("ERR: Failed to $label: $e")
+            }
+        }
+    }
 }
 
 

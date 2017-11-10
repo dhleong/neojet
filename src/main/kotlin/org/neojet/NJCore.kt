@@ -75,7 +75,7 @@ class NJCore : ApplicationComponent, Disposable {
 
         EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
             override fun editorReleased(event: EditorFactoryEvent) {
-                event.editor.getUserData(NEOJET_ENHANCED_EDITOR)?.let {
+                event.editor.getUserData(neojetEnhancedEditor)?.let {
                     KeyboardFocusManager.getCurrentKeyboardFocusManager()
                         .removeKeyEventDispatcher(it.keyEventDispatcher)
                 }
