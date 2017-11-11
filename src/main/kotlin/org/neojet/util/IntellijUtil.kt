@@ -75,7 +75,7 @@ fun Editor.getTextRange(
     //  this code is easier to reason about and understand
     TextRange(
         getLineStartOffset(region.top),
-        getLineEndOffset(region.bottom - scroll.value)
+        getLineEndOffset(region.bottom - scroll.value) + 1
     )
 }
 

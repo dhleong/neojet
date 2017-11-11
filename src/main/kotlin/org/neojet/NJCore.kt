@@ -155,7 +155,11 @@ class NJCore : ApplicationComponent, Disposable {
         if (0 == refs.getAndIncrement()) {
             val (width, height) = windowSize
             logger.info("attach: $width, $height")
-            nvim.uiAttach(width, height, true)
+
+            // TODO we probably need to force-disable syntax highlighting
+            // Use a really high viewport so we know any Scroll commands
+            //  are actually for adjusting text positions
+            nvim.uiAttach(width, 20000, true)
                 .blockingGet()
         }
 

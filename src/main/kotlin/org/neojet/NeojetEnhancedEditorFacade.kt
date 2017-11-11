@@ -277,6 +277,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         val region = currentScrollRegion
         for (scroll in event.value) {
             val scrollAmount = scroll.value
+            System.out.println("scroll($region, $scrollAmount)")
 
             val range = editor.getTextRange(region, scroll)
             val scrollRegionText = StringBuilder(editor.document.getText(range))
@@ -302,6 +303,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
     @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
+        System.out.println("setScrollRegion($currentScrollRegion)")
     }
 
     private val cursorInDocument: Boolean
