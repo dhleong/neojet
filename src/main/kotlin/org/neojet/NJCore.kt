@@ -157,9 +157,14 @@ class NJCore : ApplicationComponent, Disposable {
             logger.info("attach: $width, $height")
 
             // TODO we probably need to force-disable syntax highlighting
-            // Use a really high viewport so we know any Scroll commands
-            //  are actually for adjusting text positions
-            nvim.uiAttach(width, 20000, true)
+            // NOTE: This was a good idea, but nvim doesn't seem to respect
+            // more than 999 rows. It would be nice to assume files we're editing
+            // won't go over that, but I learned recently that one of Telegram's
+            // Activity class files is over 10K lines long, so....
+//            // Use a really high viewport so we know any Scroll commands
+//            //  are actually for adjusting text positions
+//            nvim.uiAttach(width, 20000, true)
+            nvim.uiAttach(width, height, true)
                 .blockingGet()
         }
 

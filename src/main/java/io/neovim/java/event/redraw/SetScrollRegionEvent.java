@@ -28,6 +28,10 @@ public class SetScrollRegionEvent extends RedrawSubEvent<SetScrollRegionEvent.Sc
             this.bottom = bottom;
         }
 
+        public boolean isEmpty() {
+            return left == 0 && top == 0 && right == 0 && bottom == 0;
+        }
+
         @Override
         public String toString() {
             return "ScrollRegion{" +

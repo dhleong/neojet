@@ -24,6 +24,8 @@ import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.util.ModeInfo
 import io.reactivex.Single
 import io.reactivex.disposables.CompositeDisposable
+import org.neojet.gui.ExBuffer
+import org.neojet.gui.showStatusMessage
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getLineEndOffset
@@ -118,6 +120,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     private var cursorRow: Int = 0
     private var cursorCol: Int = 0
 
+    private val exBuffer = ExBuffer()
+
     private var currentScrollRegion: SetScrollRegionEvent.ScrollRegion =
         SetScrollRegionEvent.ScrollRegion()
 
@@ -166,6 +170,20 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
+        if (cursorOnStatusLine) {
+            // TODO deal with status line?
+            System.out.println("Drop CEOL on status")
+            return
+        } else if (cursorOnExLine) {
+            // ??
+            System.out.println("Clear EX to EOL after $cursorCol")
+            exBuffer.deleteAfter(cursorCol)
+            showStatusMessage(
+                exBuffer.getLines().joinToString("\n")
+            )
+            return
+        }
+
         val logicalPosition = getLogicalPosition()
         val start = editor.logicalPositionToOffset(logicalPosition)
         val lineEndOffset = editor.getLineEndOffset(logicalPosition.line)
@@ -179,6 +197,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             return
         }
 
+        System.out.println("ClearEOL after $cursorCol @${logicalPosition.line}")
         editor.document.deleteString(start, end)
     }
 
@@ -224,23 +243,29 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
         val line = cursorRow
+        val lineText = event.bytesToCharSequence()
         if (cursorOnStatusLine) {
             // TODO deal with status line?
             System.out.println("Drop put @$line (cells.height=${cells.height()})")
             return
         } else if (cursorOnExLine) {
             // ??
-            System.out.println("Drop put @$line (cells.height=${cells.height()})")
+            System.out.println("EX put @$cursorCol: $lineText")
+            exBuffer.put(cursorCol, lineText)
+            cursorCol += lineText.length
+            showStatusMessage(
+                exBuffer.getLines().joinToString("\n")
+            )
             return
         }
 
+        exBuffer.isActive = false
         if (line > editor.lastLine
                 && event.value.none { it.value !in setOf('~', '\n') }) {
             System.out.println("Ignore 'no line' placeholders")
             return
         }
 
-        val lineText = event.bytesToCharSequence()
         val lineEndOffset = editor.getLineEndOffset(line, clamp = false)
         val start = editor.logicalPositionToOffset(LogicalPosition(line, cursorCol))
         val delta = lineEndOffset - start
@@ -279,6 +304,16 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
             val scrollAmount = scroll.value
             System.out.println("scroll($region, $scrollAmount)")
 
+            if (hasDefaultScrollRegion && exBuffer.isActive) {
+                if (scrollAmount < 0) {
+                    exBuffer.clear()
+                } else {
+                    System.out.println("-->> suppressing for echo/ex")
+                    exBuffer.append("")
+                    continue
+                }
+            }
+
             val range = editor.getTextRange(region, scroll)
             val scrollRegionText = StringBuilder(editor.document.getText(range))
 
@@ -314,6 +349,14 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
 
     private val cursorOnExLine: Boolean
         get() = cursorRow == cells.height() - 1
+
+    private val hasDefaultScrollRegion: Boolean
+        get() = currentScrollRegion.isEmpty
+            || (currentScrollRegion.top == 0
+                && currentScrollRegion.left == 0
+                && currentScrollRegion.right == cells.width() - 1
+                && currentScrollRegion.bottom == cells.height() - 1)
+
 
     // Is this sufficient?
     private fun getLogicalPosition() = LogicalPosition(cursorRow, cursorCol)
