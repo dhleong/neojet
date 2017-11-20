@@ -91,7 +91,7 @@ class UiModel {
 
     private var currentScrollRegion = SetScrollRegionEvent.ScrollRegion()
     private val defaultAttrs = CellAttributes()
-    private val pendingAttrs = CellAttributes()
+    private val currentAttrs = CellAttributes()
 
     fun resize(rows: Int, cols: Int) {
         cells = cells.resizeTo(rows, cols, this::createEmptyCell)
@@ -101,6 +101,9 @@ class UiModel {
         for (line in 0 until cells.rows) {
             clearToEol(line, 0)
         }
+
+        cursorCol = 0
+        cursorLine = 0
     }
 
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
@@ -111,7 +114,10 @@ class UiModel {
 
     private fun clearToEol(line: Int, startCol: Int) {
         for (col in startCol until cells.cols) {
-            cells[line, col].value = " "
+            cells[line, col].apply {
+                value = " "
+                attrs.setFrom(currentAttrs)
+            }
         }
     }
 
@@ -128,7 +134,7 @@ class UiModel {
 
     @HandlesEvent fun setHighlight(event: HighlightSetEvent) {
         for (ev in event.value) {
-            pendingAttrs.setFrom(ev.value, defaults = defaultAttrs)
+            currentAttrs.setFrom(ev.value, defaults = defaultAttrs)
         }
     }
 
@@ -141,19 +147,15 @@ class UiModel {
             return
         }
 
-//        System.out.println("PUT: $event @($cursorLine, $cursorCol)")
         event.value.forEach {
             if (cursorCol < cells.cols) {
                 cells[cursorLine, cursorCol].apply {
                     value = it.value.toString()
-                    attrs.setFrom(pendingAttrs)
+                    attrs.setFrom(currentAttrs)
                 }
                 ++cursorCol
             }
         }
-
-        // reset
-        pendingAttrs.resetToDefaults(defaultAttrs)
     }
 
     @HandlesEvent fun scroll(event: ScrollEvent) {
