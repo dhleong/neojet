@@ -35,8 +35,9 @@ val EDITOR_COLS_DEFAULT = 90
 
 class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     val nvim = NJCore.instance.nvim!!
-    val subs = CompositeDisposable()
-    val uiModel = UiModel()
+
+    private val subs = CompositeDisposable()
+    private val uiModel = UiModel()
 
     var rows: Int = EDITOR_ROWS_DEFAULT
     var cols: Int = EDITOR_COLS_DEFAULT
@@ -71,10 +72,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         isFocusable = true
         requestFocus()
         addKeyListener(object : KeyAdapter() {
-            override fun keyTyped(e: KeyEvent?) {
-                e?.let {
-                    nvim.input(it).subscribe()
-                }
+            override fun keyTyped(e: KeyEvent) {
+                System.out.println("Typed $e")
+                nvim.input(e).subscribe()
             }
         })
 
@@ -174,6 +174,12 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     internal fun dispatchRedrawEvents(events: List<RedrawSubEvent<*>>) {
         events.forEach(uiModel.dispatcher::dispatch)
         repaint()
+    }
+
+    internal fun dispatchNotification(events: List<Any>) {
+        for (event in events) {
+            System.out.println("Extra notification $event")
+        }
     }
 
     internal fun paintCellBg(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {

@@ -27,11 +27,13 @@ public class NeovimMapperModule extends SimpleModule {
     public NeovimMapperModule(
             Rpc rpc,
             Map<Integer, Class<?>> requestedTypes,
-            EventsManager eventsManager) {
+            EventsManager eventsManager,
+            boolean debug
+    ) {
         this.rpc = rpc;
 
         addDeserializer(Packet.class,
-            new PacketDeserializer(requestedTypes, eventsManager));
+            new PacketDeserializer(requestedTypes, eventsManager, debug));
         addDeserializer(IntPair.class,
             new IntPairDeserializer());
 

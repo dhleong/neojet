@@ -12,6 +12,9 @@ import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.IntPair
 import io.neovim.java.Neovim
 import io.neovim.java.Rpc
+import io.neovim.java.rpc.NotificationPacket
+import org.neojet.events.TestEvent
+import org.neojet.gui.UiThreadScheduler
 import org.neojet.util.absoluteLocalFile
 import org.neojet.util.component1
 import org.neojet.util.component2
@@ -63,7 +66,9 @@ class NJCore : ApplicationComponent, Disposable {
         if (isTestMode) return
 
         try {
-            nvim = Neovim.attachEmbedded()
+            nvim = Neovim.attachEmbedded(true).apply {
+                registerEventType(TestEvent::class.java)
+            }
 
             // NOTE: this is for testing. Run nvim like this:
             //  $ NVIM_LISTEN_ADDRESS=127.0.0.1:6666 nvim
@@ -145,7 +150,7 @@ class NJCore : ApplicationComponent, Disposable {
                 }
 
             override fun close() { }
-        }))
+        }, true))
     }
 
     private fun uiAttach(nvim: Neovim, editor: Editor, vFile: VirtualFile, windowSize: IntPair) {
@@ -169,13 +174,22 @@ class NJCore : ApplicationComponent, Disposable {
 //            // Use a really high viewport so we know any Scroll commands
 //            //  are actually for adjusting text positions
 //            nvim.uiAttach(width, 20000, true)
-            nvim.uiAttach(width, height, true)
+            nvim.uiAttach(width, height)
                 .blockingGet()
+
+            nvim.notifications()
+                .filter { it.event != "redraw" }
+                .observeOn(UiThreadScheduler.instance)
+                .subscribe(this::onNotification)
         }
 
         val filePath = vFile.absoluteLocalFile.absolutePath
         nvim.command("e! $filePath").blockingGet()
         editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
+    }
+
+    internal fun onNotification(packet: NotificationPacket<Any>) {
+        System.out.println("TODO handle $packet")
     }
 
 }

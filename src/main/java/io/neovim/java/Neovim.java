@@ -10,6 +10,8 @@ import io.reactivex.Single;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * @author dhleong
@@ -135,6 +137,16 @@ public class Neovim implements Closeable {
             .map(notif -> ((T) notif).value());
     }
 
+    /**
+     * Register a new event type for the RPC to be able to parse.
+     *  It must be annotated with {@link io.neovim.java.event.EventName}
+     *
+     * @param type
+     */
+    public void registerEventType(Class<?> type) {
+        rpc.eventsManager.register(type);
+    }
+
     public void quit() {
         quit("qa!");
     }
@@ -150,15 +162,23 @@ public class Neovim implements Closeable {
     }
 
     /**
+     * @see #uiAttach(int, int, Map)
+     */
+    @CheckReturnValue
+    public Single<Boolean> uiAttach(int width, int height) {
+        return uiAttach(width, height, Collections.emptyMap());
+    }
+
+    /**
      * Register as a remote UI
      */
     @CheckReturnValue
-    public Single<Boolean> uiAttach(int width, int height, boolean rgb) {
+    public Single<Boolean> uiAttach(int width, int height, Map<String, ?> options) {
         return rpc.request(
             Boolean.class,
             RequestPacket.create(
-                "ui_attach",
-                width, height, rgb
+                "nvim_ui_attach",
+                width, height, options
             )
         );
     }
@@ -193,7 +213,11 @@ public class Neovim implements Closeable {
      * Create a Neovim session attached to an embedded Neovim
      */
     public static Neovim attachEmbedded() {
-        return attach(Rpc.createEmbedded());
+        return attachEmbedded(false);
+    }
+
+    public static Neovim attachEmbedded(boolean debug) {
+        return attach(Rpc.createEmbedded(debug));
     }
 
     /**
@@ -201,7 +225,11 @@ public class Neovim implements Closeable {
      *   via a socket connection
      */
     public static Neovim attachSocket(String host, int port) {
-        return attach(Rpc.create(new SocketChannel(host, port)));
+        return attachSocket(host, port, false);
+    }
+
+    public static Neovim attachSocket(String host, int port, boolean debug) {
+        return attach(Rpc.create(new SocketChannel(host, port), debug));
     }
 
     /**

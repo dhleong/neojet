@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.neovim.java.event.EventsManager;
 import io.neovim.java.rpc.NotificationPacket;
@@ -26,11 +27,23 @@ import static io.neovim.java.rpc.impl.JsonParserUtil.nextValue;
 public class PacketDeserializer extends JsonDeserializer<Packet> {
     private final Map<Integer, Class<?>> requestedTypes;
     private final EventsManager eventsManager;
+    private final boolean debug;
 
-    public PacketDeserializer(Map<Integer, Class<?>> requestedTypes,
-            EventsManager eventsManager) {
+    public PacketDeserializer(
+        Map<Integer, Class<?>> requestedTypes,
+        EventsManager eventsManager
+    ) {
+        this(requestedTypes, eventsManager, false);
+    }
+
+    public PacketDeserializer(
+        Map<Integer, Class<?>> requestedTypes,
+        EventsManager eventsManager,
+        boolean debug
+    ) {
         this.requestedTypes = requestedTypes;
         this.eventsManager = eventsManager;
+        this.debug = debug;
     }
 
     @Override
@@ -59,13 +72,33 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
     Packet readNotification(JsonParser p) throws IOException {
         final String event = nextString(p);
         final JavaType type = eventsManager.getEventValueType(event, true);
-        final Object value = type == null
-            ? nextValue(p, JsonNode.class)
-            : nextValue(p, type);
-        return NotificationPacket.create(
-            /* event = */ event,
-            /*  args = */ value
-        );
+        final JsonParser actualParser;
+
+        final JsonNode asNode;
+        if (debug) {
+            asNode = nextValue(p, JsonNode.class);
+            actualParser = p.getCodec().treeAsTokens(asNode);
+        } else {
+            asNode = null;
+            actualParser = p;
+        }
+
+        try {
+            final Object value = type == null
+                ? nextValue(actualParser, JsonNode.class)
+                : nextValue(actualParser, type);
+            return NotificationPacket.create(
+                /* event = */ event,
+                /*  args = */ value
+            );
+        } catch (JsonMappingException e) {
+            String triedtoParse = asNode == null
+                ? String.format("`%s` event", event)
+                : asNode.toString();
+            throw JsonMappingException.from(p,
+                "Failed to parse:\n\n    " + triedtoParse + "\n\n as " + (type == null ? "JsonNode" : type),
+                e);
+        }
     }
 
     static Packet readRequest(JsonParser p) throws IOException {

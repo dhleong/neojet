@@ -18,7 +18,7 @@ public abstract class EmbeddedNeovimTest {
 
     @Before
     public void setUp() throws Exception {
-        rpc = Rpc.createEmbedded();
+        rpc = Rpc.createEmbedded(debug);
         nvim = Neovim.attach(rpc);
     }
 

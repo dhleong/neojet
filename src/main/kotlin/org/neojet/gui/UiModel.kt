@@ -151,7 +151,7 @@ class UiModel {
                     attrs.setFrom(currentAttrs)
                 }
             }
-            
+
             ++cursorCol
         }
     }

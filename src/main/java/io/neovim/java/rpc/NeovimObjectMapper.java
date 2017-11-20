@@ -23,15 +23,17 @@ public class NeovimObjectMapper {
     }
 
     public static ObjectMapper newInstance() {
-        return newInstance(null, Collections.emptyMap(), new EventsManager());
+        return newInstance(null, Collections.emptyMap(), new EventsManager(), false);
     }
 
     public static ObjectMapper newInstance(
-            Rpc rpc,
-            Map<Integer, Class<?>> requestedTypes,
-            EventsManager eventsManager) {
+        Rpc rpc,
+        Map<Integer, Class<?>> requestedTypes,
+        EventsManager eventsManager,
+        boolean debug
+    ) {
         NeovimMapperModule module = new NeovimMapperModule(
-            rpc, requestedTypes, eventsManager);
+            rpc, requestedTypes, eventsManager, debug);
 
         MessagePackFactory factory = new MessagePackFactory();
         factory.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);

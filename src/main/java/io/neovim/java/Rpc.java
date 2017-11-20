@@ -75,14 +75,14 @@ public class Rpc implements Closeable {
     final ConcurrentHashMap<Integer, Class<?>> requestedTypes =
         new ConcurrentHashMap<>();
 
-    private Rpc(@Nonnull Channel channel) {
+    private Rpc(@Nonnull Channel channel, boolean debug) {
         this.channel = channel;
         in = channel.getInputStream();
         out = channel.getOutputStream();
         err = channel.getErrorStream();
 
         mapper = NeovimObjectMapper.newInstance(
-            this, requestedTypes, eventsManager);
+            this, requestedTypes, eventsManager, debug);
 
         incoming = observeIncoming()
             .subscribeOn(Schedulers.newThread())
@@ -322,24 +322,25 @@ public class Rpc implements Closeable {
     /**
      * Convenience shortcut. If you need more control over
      * how the embedded nvim instance is started, use
-     * {@link #create(Channel)}
+     * {@link #create(Channel, boolean)}
+     * @param debug
      */
-    public static Rpc createEmbedded() {
+    public static Rpc createEmbedded(boolean debug) {
         return create(new FallbackChannel(
             // specific choices first to work in intellij sandbox
             new EmbedChannel(Collections.singletonList("/usr/local/bin/nvim")),
 
             // default args last
             new EmbedChannel()
-        ));
+        ), debug);
     }
-    public static Rpc create(Channel channel) {
+    public static Rpc create(Channel channel, boolean debug) {
         try {
             channel.tryOpen();
         } catch (Exception e) {
             throw new IllegalArgumentException("Unable to open channel", e);
         }
 
-        return new Rpc(channel);
+        return new Rpc(channel, debug);
     }
 }
