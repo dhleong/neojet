@@ -125,11 +125,6 @@ class UiModel {
         // NOTE: there's only ever one
         cursorLine = event.value[0].row()
         cursorCol = event.value[0].col()
-
-        if (cursorLine >= cells.rows) {
-            System.err.println(
-                "WARN: GOTO($event) with cells: (${cells.rows} x ${cells.cols})")
-        }
     }
 
     @HandlesEvent fun setHighlight(event: HighlightSetEvent) {
@@ -142,19 +137,12 @@ class UiModel {
         System.out.println("Unknown redraw event: $event")
 
     @HandlesEvent fun put(event: PutEvent) {
-        if (cursorLine >= cells.rows) {
-            System.err.println("WARN: unusable put on line $cursorLine vs ${cells.rows}")
-            return
-        }
-
         event.value.forEach {
-            if (cursorCol < cells.cols) {
-                cells[cursorLine, cursorCol].apply {
-                    value = it.value.toString()
-                    attrs.setFrom(currentAttrs)
-                }
-                ++cursorCol
+            cells[cursorLine, cursorCol].apply {
+                value = it.value.toString()
+                attrs.setFrom(currentAttrs)
             }
+            ++cursorCol
         }
     }
 
