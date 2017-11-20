@@ -98,6 +98,7 @@ class UiModel {
         cells = cells.resizeTo(rows, cols, this::createEmptyCell)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     @HandlesEvent fun clearScreen(event: ClearScreenEvent) {
         for (line in 0 until cells.rows) {
             clearToEol(line, 0)

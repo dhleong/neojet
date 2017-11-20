@@ -167,6 +167,7 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
      * Notifications from nvim
      */
 
+    @Suppress("UNUSED_PARAMETER")
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
