@@ -1,7 +1,9 @@
 package org.neojet.gui
 
+import io.neovim.java.event.redraw.ClearScreenEvent
 import io.neovim.java.event.redraw.CursorGotoEvent
 import io.neovim.java.event.redraw.EolClearEvent
+import io.neovim.java.event.redraw.HighlightSetEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
@@ -16,19 +18,70 @@ import java.awt.Color
  * @author dhleong
  */
 
-data class Cell(var value: String) {
-    fun copyFrom(other: Cell) {
+data class Cell(
+    var value: String,
+    var attrs: CellAttributes = CellAttributes()
+) {
+    fun setFrom(other: Cell) {
         value = other.value
+        attrs = other.attrs
+    }
+}
+
+data class CellAttributes(
+    var fg: Color = Color.BLACK,
+    var bg: Color = Color.WHITE,
+    var sp: Color = Color.BLUE,
+
+    var reverse: Boolean = false,
+    var italic: Boolean = false,
+    var bold: Boolean = false,
+    var underline: Boolean = false,
+    var undercurl: Boolean = false,
+
+    var isDefault: Boolean = true
+) {
+
+    fun setFrom(value: HighlightSetEvent.HighlightValue, defaults: CellAttributes) {
+        if (value.isEmpty) {
+            resetToDefaults(defaults)
+            return
+        }
+
+        fg = value.foreground?.toColor() ?: defaults.fg
+        bg = value.background?.toColor() ?: defaults.bg
+        sp = value.special?.toColor() ?: defaults.sp
+
+        reverse = value.bold ?: defaults.bold
+        italic = value.italic ?: defaults.italic
+        bold = value.bold ?: defaults.bold
+        underline = value.underline ?: defaults.underline
+        undercurl = value.undercurl ?: defaults.undercurl
+    }
+
+    fun setFrom(other: CellAttributes) {
+        fg = other.fg
+        bg = other.bg
+        sp = other.sp
+
+        reverse = other.bold
+        italic = other.italic
+        bold = other.bold
+        underline = other.underline
+        undercurl = other.undercurl
+
+        isDefault = false
+    }
+
+    fun resetToDefaults(defaultAttrs: CellAttributes) {
+        setFrom(defaultAttrs)
+        isDefault = true
     }
 }
 
 class UiModel {
 
     val dispatcher: EventDispatcher by lazy { EventDispatcher(this) }
-
-    var colorFg: Color = Color.BLACK
-    var colorBg: Color = Color.WHITE
-    var colorSp: Color = Color.BLUE
 
     // NOTE: lines are 1-indexed in nvim
     var cells = Matrix(EDITOR_ROWS_DEFAULT, EDITOR_COLS_DEFAULT, this::createEmptyCell)
@@ -37,9 +90,17 @@ class UiModel {
     var cursorCol: Int = 0
 
     private var currentScrollRegion = SetScrollRegionEvent.ScrollRegion()
+    private val defaultAttrs = CellAttributes()
+    private val pendingAttrs = CellAttributes()
 
     fun resize(rows: Int, cols: Int) {
         cells = cells.resizeTo(rows, cols, this::createEmptyCell)
+    }
+
+    @HandlesEvent fun clearScreen(event: ClearScreenEvent) {
+        for (line in 0 until cells.rows) {
+            clearToEol(line, 0)
+        }
     }
 
     @HandlesEvent fun clearToEol(event: EolClearEvent) {
@@ -65,6 +126,12 @@ class UiModel {
         }
     }
 
+    @HandlesEvent fun setHighlight(event: HighlightSetEvent) {
+        for (ev in event.value) {
+            pendingAttrs.setFrom(ev.value, defaults = defaultAttrs)
+        }
+    }
+
     @HandlesEvent fun onUnknown(event: UnknownRedrawEvent) =
         System.out.println("Unknown redraw event: $event")
 
@@ -77,10 +144,16 @@ class UiModel {
 //        System.out.println("PUT: $event @($cursorLine, $cursorCol)")
         event.value.forEach {
             if (cursorCol < cells.cols) {
-                cells[cursorLine, cursorCol].value = it.value.toString()
+                cells[cursorLine, cursorCol].apply {
+                    value = it.value.toString()
+                    attrs.setFrom(pendingAttrs)
+                }
                 ++cursorCol
             }
         }
+
+        // reset
+        pendingAttrs.resetToDefaults(defaultAttrs)
     }
 
     @HandlesEvent fun scroll(event: ScrollEvent) {
@@ -129,10 +202,13 @@ class UiModel {
         // NOTE: there's only ever one
         val newColor = Color(event.value[0].color)
         when (event.redrawType) {
-            "update_fg" -> colorFg = newColor
-            "update_bg" -> colorBg = newColor
-            "update_sp" -> colorSp = newColor
+            "update_fg" -> defaultAttrs.fg = newColor
+            "update_bg" -> defaultAttrs.bg = newColor
+            "update_sp" -> defaultAttrs.sp = newColor
         }
+
+        cells.filter { it.attrs.isDefault }
+            .forEach { it.attrs.resetToDefaults(defaultAttrs) }
     }
 
     /**
@@ -173,10 +249,12 @@ class UiModel {
 
     private fun copyLineTo(from: Int, to: Int, colsRange: IntRange) {
         for (i in colsRange) {
-            cells[to, i].copyFrom(cells[from, i])
+            cells[to, i].setFrom(cells[from, i])
         }
     }
 
     @Suppress("UNUSED_PARAMETER")
     private fun createEmptyCell(row: Int, col: Int): Cell = Cell(" ")
 }
+
+private fun Int.toColor(): Color = Color(this)

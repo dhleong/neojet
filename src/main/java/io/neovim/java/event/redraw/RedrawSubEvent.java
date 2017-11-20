@@ -58,6 +58,7 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
             ClearScreenEvent.class,
             CursorGotoEvent.class,
             EolClearEvent.class,
+            HighlightSetEvent.class,
             ModeChangeEvent.class,
             ModeInfoSetEvent.class,
             PutEvent.class,

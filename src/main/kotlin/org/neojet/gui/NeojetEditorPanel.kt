@@ -123,15 +123,12 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
 
         val (cellWidth, cellHeight) = getFontSize()
         val windowWidth = cols * cellWidth
-        background = uiModel.colorBg
 
         (g as Graphics2D).apply {
             setRenderingHint(
                 RenderingHints.KEY_TEXT_ANTIALIASING,
                 RenderingHints.VALUE_TEXT_ANTIALIAS_GASP
             )
-
-            color = uiModel.colorFg
 
             for (y in 0 until rows) {
                 for (x in 0 until cols) {
@@ -163,17 +160,22 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
     internal fun paintCell(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
         // TODO blink
         if (hasCursor) {
-            g.color = uiModel.colorBg.inverted()
+            g.color = cell.attrs.bg.inverted()
             g.fillRect(0, 0, cellWidth, cellHeight)
 
-            g.color = uiModel.colorFg.inverted()
+            g.color = cell.attrs.fg.inverted()
+        } else {
+            g.color = cell.attrs.bg
+            g.fillRect(0, 0, cellWidth, cellHeight)
+
+            g.color = cell.attrs.fg
         }
 
         val offset = g.getFontMetrics(g.font).descent
         g.drawString(cell.value, 0, cellHeight - offset)
 
         if (hasCursor) {
-            g.color = uiModel.colorFg
+            g.color = cell.attrs.fg
         }
     }
 

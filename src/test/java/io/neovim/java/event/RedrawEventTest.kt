@@ -3,6 +3,7 @@ package io.neovim.java.event
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.neovim.java.NeovimAssertions.assertThat
 import io.neovim.java.event.redraw.CursorGotoEvent
+import io.neovim.java.event.redraw.HighlightSetEvent
 import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
@@ -120,6 +121,28 @@ class RedrawEventTest {
         val put = event.args[0] as UpdateColorEvent
         assertThat(put.value).hasSize(1)
 
+    }
+
+    @Test fun `Read highlight_set`() {
+        val event = mapper.readValue(
+            """
+            |[2,
+            | "redraw",
+            | [["highlight_set", [{"bold":true}], [{"background":12828575}]]]
+            |]
+            """.trimMargin(),
+            RedrawEvent::class.java
+        )
+
+        assertThat(event.args).hasSize(1)
+
+        assertThat(event.args[0])
+            .isInstanceOf(HighlightSetEvent::class.java)
+
+        val set = event.args[0] as HighlightSetEvent
+        assertThat(set.value).hasSize(2)
+        assertThat(set.value[0].value.bold).isTrue()
+        assertThat(set.value[1].value.background).isEqualTo(12828575)
     }
 
     @Test fun readUnknown() {

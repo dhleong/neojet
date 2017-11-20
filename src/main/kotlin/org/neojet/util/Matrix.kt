@@ -1,5 +1,7 @@
 package org.neojet.util
 
+import kotlin.coroutines.experimental.buildIterator
+
 /**
  * @author dhleong
  */
@@ -55,5 +57,17 @@ class Matrix<T> (val rows: Int, val cols: Int, val array: Array<Array<T>>) {
             }
         }
         return result
+    }
+
+    fun filter(predicate: (T) -> Boolean) = buildIterator {
+        for (y in 0 until rows) {
+            @Suppress("LoopToCallChain")
+            for (x in 0 until cols) {
+                val item = this@Matrix[y, x]
+                if (predicate(item)) {
+                    yield(item)
+                }
+            }
+        }
     }
 }

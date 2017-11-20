@@ -77,3 +77,9 @@ assertjGen {
             'io.neovim.java.IntPair',
     ]
 }
+
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
+}
