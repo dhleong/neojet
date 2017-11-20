@@ -42,6 +42,10 @@ repositories {
 ext.vs = [
     msgpack: '0.8.12',
     rxjava: '2.1.6',
+
+    test: [
+        assertk: '0.9',
+    ]
 ]
 
 dependencies {
@@ -56,6 +60,7 @@ dependencies {
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.assertj:assertj-core:3.7.0'
+    testCompile "com.willowtreeapps.assertk:assertk:${vs.test.assertk}"
 }
 
 sourceSets {

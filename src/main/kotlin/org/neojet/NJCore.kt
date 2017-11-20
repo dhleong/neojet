@@ -25,6 +25,8 @@ import java.util.logging.Level
 import java.util.logging.Logger
 import kotlin.reflect.KProperty
 
+const val isUsingTextFileEditor: Boolean = true
+
 class NJCore : ApplicationComponent, Disposable {
 
     companion object {
@@ -73,26 +75,29 @@ class NJCore : ApplicationComponent, Disposable {
             return
         }
 
-        EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
-            override fun editorReleased(event: EditorFactoryEvent) {
-                event.editor.getUserData(neojetEnhancedEditor)?.let {
-                    KeyboardFocusManager.getCurrentKeyboardFocusManager()
-                        .removeKeyEventDispatcher(it.keyEventDispatcher)
+        @Suppress("ConstantConditionIf")
+        if (!isUsingTextFileEditor) {
+            EditorFactory.getInstance().addEditorFactoryListener(object : EditorFactoryListener {
+                override fun editorReleased(event: EditorFactoryEvent) {
+                    event.editor.getUserData(neojetEnhancedEditor)?.let {
+                        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                            .removeKeyEventDispatcher(it.keyEventDispatcher)
+                    }
                 }
-            }
 
-            override fun editorCreated(event: EditorFactoryEvent) {
-                // TODO we can probably get away with a single KeyEventDispatcher
-                val facade = NeojetEnhancedEditorFacade.install(event.editor)
-                KeyboardFocusManager.getCurrentKeyboardFocusManager()
-                    .addKeyEventDispatcher(facade.keyEventDispatcher)
-            }
-        }, this)
+                override fun editorCreated(event: EditorFactoryEvent) {
+                    // TODO we can probably get away with a single KeyEventDispatcher
+                    val facade = NeojetEnhancedEditorFacade.install(event.editor)
+                    KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                        .addKeyEventDispatcher(facade.keyEventDispatcher)
+                }
+            }, this)
+        }
     }
 
     fun attach(editor: NeojetTextFileEditor): Neovim {
         nvim?.let { nvim ->
-            uiAttach(nvim, editor.getEditor(), editor.vFile, IntPair(
+            uiAttach(nvim, editor.editor, editor.vFile, IntPair(
                 editor.panel.cols,
                 editor.panel.rows
             ))

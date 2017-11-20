@@ -26,7 +26,7 @@ val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
 class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
         : UserDataHolderBase(), FileEditor, TextEditor {
 
-    val editor: TextEditor = createEditor(project, vFile)
+    private val editor: TextEditor = createEditor(project, vFile)
 
     val panel = NeojetEditorPanel()
 
