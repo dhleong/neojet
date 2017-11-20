@@ -119,7 +119,7 @@ val JComponent.textDimensions: IntPair
 val VirtualFile.absoluteLocalFile: File
     get() = File(FileUtil.toSystemDependentName(this.path)).absoluteFile
 
-fun getEditorFont(): Font {
+fun getEditorFont(attrs: Int = Font.PLAIN): Font {
     // NOTE: sadly, neovim disabled the guifont option, but we can
     // respect the user's intellij settings
     var fontSize = 14
@@ -130,7 +130,7 @@ fun getEditorFont(): Font {
         fontSize = it.editorFontSize
     }
 
-    return Font(fontFace, Font.PLAIN, fontSize)
+    return Font(fontFace, attrs, fontSize)
 }
 
 /**
