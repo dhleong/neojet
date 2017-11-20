@@ -4,6 +4,7 @@ import io.neovim.java.event.redraw.ClearScreenEvent
 import io.neovim.java.event.redraw.CursorGotoEvent
 import io.neovim.java.event.redraw.EolClearEvent
 import io.neovim.java.event.redraw.HighlightSetEvent
+import io.neovim.java.event.redraw.ModeChangeEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
@@ -127,6 +128,12 @@ class UiModel {
         cursorCol = event.value[0].col()
     }
 
+    @HandlesEvent fun onModeChange(event: ModeChangeEvent) {
+        for (mode in event.value) {
+            System.out.println("TODO: handle mode_change: ${mode.modeName}")
+        }
+    }
+
     @HandlesEvent fun setHighlight(event: HighlightSetEvent) {
         for (ev in event.value) {
             currentAttrs.setFrom(ev.value, defaults = defaultAttrs)
@@ -138,10 +145,13 @@ class UiModel {
 
     @HandlesEvent fun put(event: PutEvent) {
         event.value.forEach {
-            cells[cursorLine, cursorCol].apply {
-                value = it.value.toString()
-                attrs.setFrom(currentAttrs)
+            if (cursorCol < cells.cols) {
+                cells[cursorLine, cursorCol].apply {
+                    value = it.value.toString()
+                    attrs.setFrom(currentAttrs)
+                }
             }
+            
             ++cursorCol
         }
     }
