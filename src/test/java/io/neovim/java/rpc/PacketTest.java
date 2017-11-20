@@ -8,7 +8,9 @@ import org.msgpack.core.MessagePack;
 import org.msgpack.core.MessageUnpacker;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import static io.neovim.java.NeovimAssertions.assertThat;
 
@@ -39,14 +41,14 @@ public class PacketTest {
             .hasType(Packet.Type.NOTIFICATION);
         assertThat((NotificationPacket) packet)
             .hasEvent("takeoff")
-            .hasArgs(fromJson("[12, 34]"));
+            .hasArgs(nodeFromJson("[12, 34]"));
     }
 
     @Test
     public void writeNotification() throws IOException {
-        NotificationPacket<JsonNode> notif = NotificationPacket.create(
+        NotificationPacket<JsonNode> notif = NotificationPacket.createFromList(
             "landing",
-            fromJson("[42, 9001]")
+            nodeFromJson("[42, 9001]")
         );
 
         MessageBufferPacker pack = MessagePack.newDefaultBufferPacker();
@@ -116,7 +118,17 @@ public class PacketTest {
             .isEqualTo(original);
     }
 
-    static JsonNode fromJson(String json) throws IOException {
+    static JsonNode nodeFromJson(String json) throws IOException {
         return new ObjectMapper().readTree(json);
+    }
+
+    static List<JsonNode> listFromJson(String json) throws IOException {
+        JsonNode node = nodeFromJson(json);
+        final int size = node.size();
+        ArrayList<JsonNode> result = new ArrayList<>(size);
+        for (int i=0; i < size; ++i) {
+            result.add(node.get(i));
+        }
+        return result;
     }
 }

@@ -7,8 +7,6 @@ import io.neovim.java.rpc.NotificationPacket
  * @author dhleong
  */
 @EventName("test")
-class TestEvent : NotificationPacket<List<String>>() {
-    override fun toString(): String {
-        return "TestEvent(${value()})"
-    }
+class TestEvent : NotificationPacket<String>() {
+    override fun toString(): String = "TestEvent(${value()})"
 }

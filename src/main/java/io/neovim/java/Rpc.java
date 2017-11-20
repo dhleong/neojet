@@ -191,9 +191,7 @@ public class Rpc implements Closeable {
     }
 
     public <T extends Packet> Flowable<T> receive(Class<T> type) {
-        return receive()
-            .filter(p -> type.isAssignableFrom(p.getClass()))
-            .cast(type);
+        return receive().ofType(type);
     }
 
     /**

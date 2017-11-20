@@ -11,6 +11,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * @author dhleong
@@ -73,10 +74,21 @@ public final class EventsManager {
         }
 
         ParameterizedType packetType = getNotificationPacketType(eventClass);
-        Type eventValueType = packetType.getActualTypeArguments()[0];
-        JavaType type = factory.constructType(eventValueType);
+        JavaType type = getJavaTypeForPacket(packetType);
         eventValueClassCache.put(eventName, type);
         return type;
+    }
+
+    @Nonnull JavaType getJavaTypeForPacket(ParameterizedType packetType) {
+        Type eventValueType = packetType.getActualTypeArguments()[0];
+        JavaType javaType = factory.constructType(eventValueType);
+        if (packetType.getRawType() != NotificationPacket.class) {
+            return javaType;
+        }
+
+        // notification packets are special since the the java type
+        // is automatically a list of whatever was provided
+        return factory.constructCollectionType(List.class, javaType);
     }
 
     static @Nonnull ParameterizedType getNotificationPacketType(Type base) {

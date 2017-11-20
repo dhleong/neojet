@@ -1,5 +1,6 @@
 package io.neovim.java.rpc.impl;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -14,6 +15,7 @@ import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import static io.neovim.java.rpc.impl.JsonParserUtil.expectNext;
@@ -84,14 +86,17 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
         }
 
         try {
-            final Object value = type == null
-                ? nextValue(actualParser, JsonNode.class)
-                : nextValue(actualParser, type);
-            return NotificationPacket.create(
-                /* event = */ event,
-                /*  args = */ value
-            );
-        } catch (JsonMappingException e) {
+            if (type == null) {
+                return NotificationPacket.createFromList(event,
+                    nextValue(actualParser, JsonNode.class));
+            } else {
+                //noinspection unchecked
+                return NotificationPacket.create(
+                    event,
+                    (List) nextValue(actualParser, type)
+                );
+            }
+        } catch (JsonMappingException|JsonParseException e) {
             String triedtoParse = asNode == null
                 ? String.format("`%s` event", event)
                 : asNode.toString();

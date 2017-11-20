@@ -73,7 +73,6 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         requestFocus()
         addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) {
-                System.out.println("Typed $e")
                 nvim.input(e).subscribe()
             }
         })

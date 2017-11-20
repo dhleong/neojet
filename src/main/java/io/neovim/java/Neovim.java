@@ -134,7 +134,7 @@ public class Neovim implements Closeable {
         //noinspection unchecked
         return notifications()
             .filter(notif -> eventName.equals(notif.event))
-            .map(notif -> ((T) notif).value());
+            .flatMap(notif -> Flowable.fromIterable(((T) notif).value()));
     }
 
     /**

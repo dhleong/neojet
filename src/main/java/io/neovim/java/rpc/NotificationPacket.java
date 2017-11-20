@@ -1,15 +1,19 @@
 package io.neovim.java.rpc;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.neovim.java.event.Event;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author dhleong
  */
 public class NotificationPacket<T>
         extends Packet
-        implements Event<T> {
+        implements Event<List<T>> {
     public String event;
-    public T args;
+    public List<T> args;
 
     protected NotificationPacket() {
         type = Type.NOTIFICATION;
@@ -21,7 +25,7 @@ public class NotificationPacket<T>
     }
 
     @Override
-    public T value() {
+    public List<T> value() {
         return args;
     }
 
@@ -53,10 +57,19 @@ public class NotificationPacket<T>
             '}';
     }
 
-    public static <T> NotificationPacket<T> create(String event, T args) {
+    public static <T> NotificationPacket<T> create(String event, List<T> args) {
         NotificationPacket<T> p = new NotificationPacket<>();
         p.event = event;
         p.args = args;
         return p;
+    }
+
+    public static NotificationPacket<JsonNode> createFromList(String event, JsonNode node) {
+        final int size = node.size();
+        ArrayList<JsonNode> result = new ArrayList<>(size);
+        for (int i=0; i < size; ++i) {
+            result.add(node.get(i));
+        }
+        return create(event, result);
     }
 }

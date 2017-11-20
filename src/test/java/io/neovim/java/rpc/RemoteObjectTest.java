@@ -30,7 +30,7 @@ public class RemoteObjectTest extends EmbeddedNeovimTest {
         Buffer b = nvim.current.buffer().blockingGet();
 
         ObjectMapper mapper =
-            NeovimObjectMapper.newInstance(rpc, Collections.emptyMap(), new EventsManager());
+            NeovimObjectMapper.newInstance(rpc, Collections.emptyMap(), new EventsManager(), true);
 
         byte[] bytes = mapper.writeValueAsBytes(b);
 
