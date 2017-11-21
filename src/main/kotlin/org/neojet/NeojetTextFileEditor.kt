@@ -46,20 +46,14 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun navigateTo(navigatable: Navigatable) {
-
+        System.out.println("TODO navigate to $navigatable")
     }
 
-    override fun getComponent(): JComponent {
-        return panel
-    }
+    override fun getComponent(): JComponent = panel
 
-    override fun getPreferredFocusedComponent(): JComponent? {
-        return panel
-    }
+    override fun getPreferredFocusedComponent(): JComponent? = panel
 
-    override fun getName(): String {
-        return "neojet"
-    }
+    override fun getName(): String = "neojet"
 
     override fun setState(state: FileEditorState) {
 
@@ -97,10 +91,12 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? {
+        System.out.println("TODO getBackgroundHighlighter")
         return null
     }
 
     override fun getCurrentLocation(): FileEditorLocation? {
+        System.out.println("TODO getCurrentLocation")
         return null
     }
 

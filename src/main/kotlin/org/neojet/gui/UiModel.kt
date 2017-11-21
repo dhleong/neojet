@@ -5,12 +5,14 @@ import io.neovim.java.event.redraw.CursorGotoEvent
 import io.neovim.java.event.redraw.EolClearEvent
 import io.neovim.java.event.redraw.HighlightSetEvent
 import io.neovim.java.event.redraw.ModeChangeEvent
+import io.neovim.java.event.redraw.ModeInfoSetEvent
 import io.neovim.java.event.redraw.PutEvent
 import io.neovim.java.event.redraw.ResizeEvent
 import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
 import io.neovim.java.event.redraw.UpdateColorEvent
+import io.neovim.java.util.ModeInfo
 import org.neojet.EventDispatcher
 import org.neojet.HandlesEvent
 import org.neojet.util.Matrix
@@ -95,6 +97,12 @@ class UiModel {
     private val defaultAttrs = CellAttributes()
     private val currentAttrs = CellAttributes()
 
+    val currentMode: ModeInfo?
+        get() = mode
+
+    private lateinit var modes: List<ModeInfo>
+    private var mode: ModeInfo? = null
+
     fun resize(rows: Int, cols: Int) {
         cells = cells.resizeTo(rows, cols, this::createEmptyCell)
     }
@@ -130,9 +138,13 @@ class UiModel {
         cursorCol = event.value[0].col()
     }
 
+    @HandlesEvent fun onModeInfoSet(event: ModeInfoSetEvent) {
+        modes = event.value[0].modes
+    }
+
     @HandlesEvent fun onModeChange(event: ModeChangeEvent) {
-        for (mode in event.value) {
-            System.out.println("TODO: handle mode_change: ${mode.modeName}")
+        modes[event.value[0].modeIndex].let {
+            mode = it
         }
     }
 

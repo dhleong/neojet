@@ -7,6 +7,7 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.MessageBusConnection
 import io.neovim.java.event.redraw.RedrawSubEvent
+import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.NJCore
 import org.neojet.util.bufferedRedrawEvents
@@ -157,10 +158,10 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
                 }
             }
 
-            forEachCell(g) { y, x, _, cellHeight ->
+            forEachCell(g) { y, x, cellWidth, cellHeight ->
                 val hasCursor = uiModel.cursorLine == y && uiModel.cursorCol == x
                 uiModel.cells[y, x].let {
-                    paintCellFg(g, it, cellHeight, hasCursor)
+                    paintCellFg(g, it, cellWidth, cellHeight, hasCursor)
                 }
             }
         }
@@ -186,15 +187,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         repaint()
     }
 
-    internal fun dispatchNotification(events: List<Any>) {
-        for (event in events) {
-            System.out.println("Extra notification $event")
-        }
-    }
-
     internal fun paintCellBg(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
         // TODO blink cursor? insert mode cursor?
-        if (hasCursor) {
+        if (hasCursor && uiModel.currentMode?.cursorShape == ModeInfo.CursorShape.BLOCK) {
             g.color = cell.attrs.bg.inverted()
         } else {
             g.color = cell.attrs.bg
@@ -203,8 +198,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         g.fillRect(0, 0, cellWidth, cellHeight)
     }
 
-    internal fun paintCellFg(g: Graphics, cell: Cell, cellHeight: Int, hasCursor: Boolean) {
-        if (hasCursor) {
+    internal fun paintCellFg(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
+        val cursorShape = uiModel.currentMode?.cursorShape ?: ModeInfo.CursorShape.BLOCK
+        if (hasCursor && cursorShape == ModeInfo.CursorShape.BLOCK) {
             g.color = cell.attrs.fg.inverted()
         } else {
             g.color = cell.attrs.fg
@@ -213,6 +209,19 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         g.font = getFontFor(cell.attrs)
         val offset = g.getFontMetrics(g.font).descent
         g.drawString(cell.value, 0, cellHeight - offset)
+
+        if (hasCursor && cursorShape == ModeInfo.CursorShape.VERTICAL) {
+
+            // TODO is this the right color?
+            g.color = cell.attrs.bg.inverted()
+            g.drawLine(0, 0, 0, cellHeight)
+
+        } else if (hasCursor && cursorShape == ModeInfo.CursorShape.HORIZONTAL) {
+            // TODO this is usually rendered as semi transparent, covering the
+            //  bottom half of the character
+            g.color = cell.attrs.bg.inverted()
+            g.drawLine(0, cellHeight, cellWidth, cellHeight)
+        }
     }
 
     private fun getFontFor(attrs: CellAttributes): Font {
