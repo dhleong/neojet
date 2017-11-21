@@ -13,8 +13,10 @@ import io.neovim.java.IntPair
 import io.neovim.java.Neovim
 import io.neovim.java.Rpc
 import io.neovim.java.rpc.NotificationPacket
-import org.neojet.events.TestEvent
+import io.reactivex.disposables.CompositeDisposable
+import org.neojet.events.registerCustomEvents
 import org.neojet.gui.UiThreadScheduler
+import org.neojet.integrate.sourceRes
 import org.neojet.util.absoluteLocalFile
 import org.neojet.util.component1
 import org.neojet.util.component2
@@ -46,12 +48,14 @@ class NJCore : ApplicationComponent, Disposable {
     }
     val logger = Logger.getLogger("NeoJet:NJCore")!!
 
+    val subs = CompositeDisposable()
     var nvim: Neovim? = null
     var refs = AtomicInteger(0)
 
     override fun getComponentName(): String = COMPONENT_NAME
 
     override fun disposeComponent() {
+        subs.clear()
         nvim?.close()
         nvim = null
     }
@@ -65,20 +69,31 @@ class NJCore : ApplicationComponent, Disposable {
 
         if (isTestMode) return
 
-        try {
-            nvim = Neovim.attachEmbedded(true).apply {
-                registerEventType(TestEvent::class.java)
-            }
+        val nvim = try {
+            Neovim.attachEmbedded(true)
+                .registerCustomEvents()
 
             // NOTE: this is for testing. Run nvim like this:
             //  $ NVIM_LISTEN_ADDRESS=127.0.0.1:6666 nvim
-//            nvim = Neovim.attachSocket("127.0.0.1", 7777)
+//            nvim = Neovim.attachSocket("127.0.0.1", 7777).registerCustomEvents()
         } catch (e: Throwable) {
             logger.log(Level.WARNING,
                 "Unable to initialize Neovim connection. Is it installed?",
                 e)
             return
         }
+
+        this.nvim = nvim
+
+        nvim.sourceRes("vim/init.vim")
+            .blockingGet()
+
+        subs.add(
+            nvim.notifications()
+                .filter { it.event != "redraw" }
+                .observeOn(UiThreadScheduler.instance)
+                .subscribe(this::onNotification)
+        )
 
         @Suppress("ConstantConditionIf")
         if (!isUsingTextFileEditor) {
@@ -176,11 +191,6 @@ class NJCore : ApplicationComponent, Disposable {
 //            nvim.uiAttach(width, 20000, true)
             nvim.uiAttach(width, height)
                 .blockingGet()
-
-            nvim.notifications()
-                .filter { it.event != "redraw" }
-                .observeOn(UiThreadScheduler.instance)
-                .subscribe(this::onNotification)
         }
 
         val filePath = vFile.absoluteLocalFile.absolutePath
