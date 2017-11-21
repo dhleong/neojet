@@ -6,6 +6,7 @@ import io.neovim.java.event.redraw.EolClearEvent
 import io.neovim.java.event.redraw.HighlightSetEvent
 import io.neovim.java.event.redraw.ModeChangeEvent
 import io.neovim.java.event.redraw.PutEvent
+import io.neovim.java.event.redraw.ResizeEvent
 import io.neovim.java.event.redraw.ScrollEvent
 import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
@@ -154,6 +155,12 @@ class UiModel {
             }
 
             ++cursorCol
+        }
+    }
+
+    @HandlesEvent fun resize(event: ResizeEvent) {
+        event.value.last().let { size ->
+            resize(size.y(), size.x())
         }
     }
 

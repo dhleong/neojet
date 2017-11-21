@@ -62,6 +62,7 @@ public abstract class RedrawSubEvent<T> implements Event<List<T>> {
             ModeChangeEvent.class,
             ModeInfoSetEvent.class,
             PutEvent.class,
+            ResizeEvent.class,
             ScrollEvent.class,
             SetScrollRegionEvent.class,
             UpdateColorEvent.class,
