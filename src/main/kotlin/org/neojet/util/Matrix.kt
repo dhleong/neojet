@@ -14,21 +14,16 @@ class Matrix<T> (val rows: Int, val cols: Int, val array: Array<Array<T>>) {
             Matrix(rows, cols, Array(rows, { arrayOfNulls<T>(cols) }))
 
         inline operator fun <reified T> invoke(rows: Int, cols: Int, operator: (Int, Int) -> (T)): Matrix<T> {
-            val array = Array(rows, {
-                val row = it
+            val array = Array(rows, { row ->
                 Array(cols, { operator(row, it) })
             })
             return Matrix(rows, cols, array)
         }
     }
 
-    operator fun get(row: Int): Array<T> {
-        return array[row]
-    }
+    operator fun get(row: Int): Array<T> = array[row]
 
-    operator fun get(row: Int, col: Int): T {
-        return array[row][col]
-    }
+    operator fun get(row: Int, col: Int): T = array[row][col]
 
     operator fun set(row: Int, col: Int, t: T) {
         array[row][col] = t
