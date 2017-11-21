@@ -1,9 +1,10 @@
 package io.neovim.java.rpc.impl;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.neovim.java.Buffer;
@@ -16,6 +17,8 @@ import io.neovim.java.event.redraw.RedrawSubEvent;
 import io.neovim.java.rpc.Packet;
 import io.reactivex.functions.BiFunction;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -23,6 +26,8 @@ import java.util.Map;
  */
 public class NeovimMapperModule extends SimpleModule {
     private final Rpc rpc;
+
+    public final Map<Class<?>, JsonDeserializer<?>> extensionTypeDeserializers = new HashMap<>();
 
     public NeovimMapperModule(
             Rpc rpc,
@@ -55,20 +60,37 @@ public class NeovimMapperModule extends SimpleModule {
     }
 
     public JsonDeserializer<?> findDeserializer(Class<?> klass) {
-        try {
-            return _deserializers.findEnumDeserializer(
-                klass, null, null);
-        } catch (JsonMappingException e) {
-            throw new IllegalStateException("No Deserializer for " + klass, e);
+//        try {
+//            return _deserializers.findEnumDeserializer(
+//                klass, null, null);
+//        } catch (JsonMappingException e) {
+//            throw new IllegalStateException("No Deserializer for " + klass, e);
+//        }
+
+        JsonDeserializer<?> deserializer = extensionTypeDeserializers.get(klass);
+        if (deserializer == null) {
+            throw new IllegalStateException("No Deserializer for " + klass);
         }
+
+        return deserializer;
     }
 
     private <T extends RemoteObject> void defineRemoteObject(
             Class<T> type, BiFunction<Rpc, Long, T> factory) {
-        addDeserializer(type,
+//        addDeserializer(type,
+//            RemoteObjectDeserializer.create(factory, rpc));
+        extensionTypeDeserializers.put(type,
             RemoteObjectDeserializer.create(factory, rpc));
         addSerializer(type,
             RemoteObjectSerializer.create(type));
+        addDeserializer(type,
+            new JsonDeserializer<T>() {
+                @Override
+                public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+                    //noinspection unchecked
+                    return (T) p.getEmbeddedObject();
+                }
+            });
     }
 
 }

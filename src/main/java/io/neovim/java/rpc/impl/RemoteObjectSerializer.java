@@ -1,7 +1,6 @@
 package io.neovim.java.rpc.impl;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import org.msgpack.core.MessageBufferPacker;
@@ -24,7 +23,7 @@ public class RemoteObjectSerializer<T extends RemoteObject> extends JsonSerializ
     }
 
     @Override
-    public void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException, JsonProcessingException {
+    public void serialize(T value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         // it should be safe to reuse the Packer since we only ever write serially
         packer.clear();
         packer.packLong(value.id);

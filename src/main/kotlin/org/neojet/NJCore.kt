@@ -195,7 +195,8 @@ class NJCore : ApplicationComponent, Disposable {
 
         val filePath = vFile.absoluteLocalFile.absolutePath
         nvim.command("e! $filePath").blockingGet()
-        editor.putUserData(NVIM_BUFFER_KEY, nvim.current.buffer().blockingGet())
+        val buf = nvim.current.buffer().blockingGet()
+        editor.putUserData(NVIM_BUFFER_KEY, buf)
     }
 
     internal fun onNotification(packet: NotificationPacket<Any>) {

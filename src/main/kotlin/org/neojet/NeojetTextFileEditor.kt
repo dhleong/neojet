@@ -69,7 +69,14 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun selectNotify() {
-
+        // TODO possibly, each Editor should have its own tabpage?
+        //  that would automatically keep the right cursor position
+        //  (swapping the buffer in the active window does not do this!)
+        val buffer = getEditor().getUserData(NVIM_BUFFER_KEY)
+        buffer?.let {
+            nvim.current.bufferSet(it)
+                .blockingGet()
+        }
     }
 
     override fun deselectNotify() {

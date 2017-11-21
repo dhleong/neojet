@@ -56,13 +56,11 @@ class VimIntegrator {
  */
 fun Neovim.sourceRes(path: String): Single<Boolean> {
     try {
-        System.out.println(":soRes $path")
         val file = VimIntegrator.instance.getLocalFile(path)
         val filePath = file.absolutePath.replace(" ", "\\ ")
-        System.out.println(":so $filePath")
         return this.command("source $filePath")
     } catch (e: Throwable) {
         e.printStackTrace()
+        throw e;
     }
-    return Single.just(true)
 }

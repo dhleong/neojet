@@ -28,7 +28,7 @@ public class NeovimExtensionTypes {
     }
 
     public byte getTypeIdOf(Class<? extends RemoteObject> type) {
-        Byte id =  types.get(type);
+        Byte id = types.get(type);
         if (id == null) throw new IllegalArgumentException("Unknown type: " + type);
 
         return id;

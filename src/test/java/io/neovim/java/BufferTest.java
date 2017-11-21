@@ -18,8 +18,9 @@ public class BufferTest extends EmbeddedNeovimTest {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        nvimCommand("e serenity.ship");
+        nvimCommand("e serenity.firefly");
         buffer = nvim.current.buffer().blockingGet();
+        assertThat(buffer.id).isEqualTo(1);
     }
 
     @Test

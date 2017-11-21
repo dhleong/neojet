@@ -163,6 +163,14 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         }
     }
 
+//    override fun processFocusEvent(e: FocusEvent) {
+//        super.processFocusEvent(e)
+//
+//        if (e.id == FocusEvent.FOCUS_GAINED) {
+//            System.out.println("focus $this")
+//        }
+//    }
+
     internal fun getFontSize(): Pair<Int, Int> {
         val fontMetrics = getFontMetrics(font)
         val width = fontMetrics.charWidth('M')
