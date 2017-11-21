@@ -36,18 +36,27 @@ fun Neovim.bufferedRedrawEvents(): Flowable<List<RedrawSubEvent<*>>> {
         .filter { it.isNotEmpty() }
 }
 
-val specialKeys = mapOf(
+val specialKeyChars = mapOf(
     '\n' to "<CR>",
     '<' to "<LT>"
 )
 
+val specialKeyCodes = mapOf(
+    37 to "<LEFT>",
+    38 to "<UP>",
+    39 to "<RIGHT>",
+    40 to "<DOWN>"
+)
+
+// TODO tests please
 // TODO special keys? modifiers?
+fun KeyEvent.toVimCode() = specialKeyChars[keyChar]
+    ?: specialKeyCodes[keyCode]
+    ?: keyChar.toString()
+
 fun Neovim.input(e: KeyEvent): Single<Int> {
     try {
-        val keyCode = specialKeys[e.keyChar]
-            ?: e.keyChar.toString()
-
-        return input(keyCode)
+        return input(e.toVimCode())
     } catch (e: Throwable) {
         e.printStackTrace()
         throw e

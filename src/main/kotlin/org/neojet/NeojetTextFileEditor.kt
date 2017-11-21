@@ -15,6 +15,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.pom.Navigatable
 import io.neovim.java.Buffer
 import org.neojet.gui.NeojetEditorPanel
+import org.neojet.gui.NeojetShortcutKeyAction
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 
@@ -31,6 +32,10 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     val panel = NeojetEditorPanel()
 
     val nvim = NJCore.instance.attach(this)
+
+    init {
+        NeojetShortcutKeyAction.install(this)
+    }
 
     override fun getEditor(): Editor {
         return editor.editor
@@ -100,6 +105,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
     }
 
     override fun dispose() {
+        NeojetShortcutKeyAction.uninstall(this)
         panel.dispose()
     }
 
