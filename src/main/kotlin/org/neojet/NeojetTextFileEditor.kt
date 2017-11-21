@@ -1,7 +1,11 @@
 package org.neojet
 
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
+import com.intellij.codeInsight.daemon.impl.TextEditorBackgroundHighlighter
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.ex.MarkupModelEx
+import com.intellij.openapi.editor.ex.RangeHighlighterEx
+import com.intellij.openapi.editor.impl.event.MarkupModelListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorLocation
 import com.intellij.openapi.fileEditor.FileEditorProvider
@@ -24,7 +28,10 @@ val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
 /**
  * @author dhleong
  */
-class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
+class NeojetTextFileEditor(
+    private val project: Project,
+    val vFile: VirtualFile
+)
         : UserDataHolderBase(), FileEditor, TextEditor {
 
     private val editor: TextEditor = createEditor(project, vFile)
@@ -33,8 +40,28 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
 
     val nvim = NJCore.instance.attach(this)
 
+    private val myBackgroundHighlighter by lazy(LazyThreadSafetyMode.NONE) {
+        TextEditorBackgroundHighlighter(project, getEditor())
+    }
+
     init {
         NeojetShortcutKeyAction.install(this)
+
+        (getEditor().markupModel as MarkupModelEx)
+            .addMarkupModelListener(this, object : MarkupModelListener {
+                override fun attributesChanged(highlighter: RangeHighlighterEx, renderersChanged: Boolean, fontStyleOrColorChanged: Boolean) {
+                    System.out.println("Attrs changed: $highlighter")
+                }
+
+                override fun beforeRemoved(highlighter: RangeHighlighterEx) {
+                    System.out.println("Remove $highlighter")
+                }
+
+                override fun afterAdded(highlighter: RangeHighlighterEx) {
+                    System.out.println("Add $highlighter")
+                }
+
+            })
     }
 
     override fun getEditor(): Editor {
@@ -92,7 +119,7 @@ class NeojetTextFileEditor(val project: Project, val vFile: VirtualFile)
 
     override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? {
         System.out.println("TODO getBackgroundHighlighter")
-        return null
+        return myBackgroundHighlighter
     }
 
     override fun getCurrentLocation(): FileEditorLocation? {
