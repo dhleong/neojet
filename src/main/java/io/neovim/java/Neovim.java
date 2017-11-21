@@ -91,10 +91,14 @@ public class Neovim implements Closeable {
     }
 
     /**
-     * Push `bytes` to Nvim low level input buffer.
+     * Push `bytes` to Nvim low level input buffer. Note that keycodes like
+     *  <code>&lt;CR&gt;</code> are translated, so <code>&lt;</code> is
+     *  special. To input a literal <code>&lt;</code>, send
+     *  <code>&lt;LT&gt;</code>
      *
      * Unlike `feedkeys()`, this uses the lowest level input buffer and the
-     * call is not deferred.
+     *  call is not deferred.
+     *
      * @return the number of bytes actually written (which can be less than
      *  what was requested if the buffer is full).
      */

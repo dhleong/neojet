@@ -71,6 +71,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         focusTraversalKeysEnabled = false
         isFocusable = true
         requestFocus()
+
+        // FIXME cursor keys, ctrl-n, etc. in particular don't work
+        //  They're not even dispatched here....
         addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) {
                 nvim.input(e).subscribe()

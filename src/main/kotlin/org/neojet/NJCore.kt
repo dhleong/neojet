@@ -46,11 +46,13 @@ class NJCore : ApplicationComponent, Disposable {
 
         var isTestMode: Boolean = false
     }
-    val logger = Logger.getLogger("NeoJet:NJCore")!!
 
-    val subs = CompositeDisposable()
+    private val logger = Logger.getLogger("NeoJet:NJCore")!!
+
     var nvim: Neovim? = null
-    var refs = AtomicInteger(0)
+
+    private var refs = AtomicInteger(0)
+    private val subs = CompositeDisposable()
 
     override fun getComponentName(): String = COMPONENT_NAME
 

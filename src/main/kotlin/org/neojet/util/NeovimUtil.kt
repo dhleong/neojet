@@ -36,9 +36,22 @@ fun Neovim.bufferedRedrawEvents(): Flowable<List<RedrawSubEvent<*>>> {
         .filter { it.isNotEmpty() }
 }
 
+val specialKeys = mapOf(
+    '\n' to "<CR>",
+    '<' to "<LT>"
+)
+
 // TODO special keys? modifiers?
-// FIXME cursor keys in particular don't work
-fun Neovim.input(e: KeyEvent): Single<Int> =
-    input(e.keyChar.toString())
+fun Neovim.input(e: KeyEvent): Single<Int> {
+    try {
+        val keyCode = specialKeys[e.keyChar]
+            ?: e.keyChar.toString()
+
+        return input(keyCode)
+    } catch (e: Throwable) {
+        e.printStackTrace()
+        throw e
+    }
+}
 
 
