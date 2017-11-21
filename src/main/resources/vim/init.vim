@@ -14,7 +14,7 @@ endfunction
 
 augroup neojet_autocmds
     autocmd!
-    autocmd BufWinEnter * call s:rpc("buf_win_enter", expand('%:p'))
+    autocmd BufWinEnter * call <SID>rpc("buf_win_enter", expand('%:p'))
 augroup END
 
 let g:neojet#version = 1
