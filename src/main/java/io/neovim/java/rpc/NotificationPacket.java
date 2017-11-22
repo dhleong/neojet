@@ -1,8 +1,10 @@
 package io.neovim.java.rpc;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.event.Event;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,11 +59,26 @@ public class NotificationPacket<T>
             '}';
     }
 
-    public static <T> NotificationPacket<T> create(String event, List<T> args) {
-        NotificationPacket<T> p = new NotificationPacket<>();
+    public static <T> NotificationPacket<T> create(String event, Class<?> eventType, List<T> args) {
+        final NotificationPacket<T> inflated = inflateEmpty(eventType);
+        final NotificationPacket<T> p = inflated == null
+            ? new NotificationPacket<>()
+            : inflated;
+
         p.event = event;
         p.args = args;
         return p;
+    }
+
+    private static ObjectMapper mapper = new ObjectMapper();
+    private static <T> NotificationPacket<T> inflateEmpty(Class<?> eventType) {
+        try {
+            //noinspection unchecked
+            return mapper.readValue("[]", (Class<NotificationPacket<T>>) eventType);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public static NotificationPacket<JsonNode> createFromList(String event, JsonNode node) {
@@ -70,6 +87,6 @@ public class NotificationPacket<T>
         for (int i=0; i < size; ++i) {
             result.add(node.get(i));
         }
-        return create(event, result);
+        return create(event, NotificationPacket.class, result);
     }
 }

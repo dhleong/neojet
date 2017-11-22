@@ -2,6 +2,8 @@ package io.neovim.java.rpc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.neovim.java.event.EventName;
+import io.neovim.java.event.EventsManager;
 import org.junit.Test;
 import org.msgpack.core.MessageBufferPacker;
 import org.msgpack.core.MessagePack;
@@ -41,7 +43,39 @@ public class PacketTest {
             .hasType(Packet.Type.NOTIFICATION);
         assertThat((NotificationPacket) packet)
             .hasEvent("takeoff")
-            .hasArgs(nodeFromJson("[12, 34]"));
+            .hasArgs(listFromJson("[12, 34]").toArray());
+//            .hasArgs(nodeFromJson("[12, 34]"));
+    }
+
+
+    @EventName("takeoff")
+    static class TakeoffEvent extends NotificationPacket<Integer> {
+    }
+
+    @Test
+    public void readCustomNotification() throws IOException {
+        MessageBufferPacker pack = MessagePack.newDefaultBufferPacker();
+        pack.packArrayHeader(3);
+        pack.packInt(Packet.Type.NOTIFICATION.ordinal());
+        pack.packString("takeoff");
+        pack.packArrayHeader(2);
+        pack.packInt(12);
+        pack.packInt(34);
+
+        EventsManager eventsManager = new EventsManager();
+        eventsManager.register(TakeoffEvent.class);
+        ObjectMapper mapper = NeovimObjectMapper.newInstance(eventsManager);
+        Packet packet = mapper.readValue(
+            pack.toByteArray(),
+            Packet.class
+        );
+
+        assertThat(packet)
+            .isInstanceOf(TakeoffEvent.class)
+            .hasType(Packet.Type.NOTIFICATION);
+        assertThat((TakeoffEvent) packet)
+            .hasEvent("takeoff")
+            .hasArgs(12, 34);
     }
 
     @Test

@@ -1,4 +1,4 @@
-package org.neojet
+package org.neojet.util
 
 import io.neovim.java.event.Event
 
@@ -10,7 +10,10 @@ annotation class HandlesEvent
 
 internal typealias EventHandler = (Any) -> Unit
 
-class EventDispatcher(val target: Any, val warnUnhandled: Boolean = true) {
+class EventDispatcher(
+    private val target: Any,
+    private val warnUnhandled: Boolean = true
+) {
 
     private val handlers = HashMap<Class<*>, EventHandler>().let { handlers ->
         target.javaClass.declaredMethods

@@ -93,6 +93,7 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
                 //noinspection unchecked
                 return NotificationPacket.create(
                     event,
+                    eventsManager.getEventType(event),
                     (List) nextValue(actualParser, type)
                 );
             }

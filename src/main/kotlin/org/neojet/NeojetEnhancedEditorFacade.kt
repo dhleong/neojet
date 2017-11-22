@@ -26,6 +26,8 @@ import io.reactivex.Single
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.gui.ExBuffer
 import org.neojet.gui.showStatusMessage
+import org.neojet.util.EventDispatcher
+import org.neojet.util.HandlesEvent
 import org.neojet.util.buffer
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getLineEndOffset
@@ -168,7 +170,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
      */
 
     @Suppress("UNUSED_PARAMETER")
-    @HandlesEvent fun clearToEol(event: EolClearEvent) {
+    @HandlesEvent
+    fun clearToEol(event: EolClearEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
         if (cursorOnStatusLine) {
@@ -202,7 +205,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         editor.document.deleteString(start, end)
     }
 
-    @HandlesEvent fun cursorMoved(event: CursorGotoEvent) {
+    @HandlesEvent
+    fun cursorMoved(event: CursorGotoEvent) {
         movingCursor = true
 
         event.value[0].let {
@@ -228,11 +232,13 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         movingCursor = false
     }
 
-    @HandlesEvent fun modeInfoSet(event: ModeInfoSetEvent) {
+    @HandlesEvent
+    fun modeInfoSet(event: ModeInfoSetEvent) {
         modes = event.value[0].modes
     }
 
-    @HandlesEvent fun modeChange(event: ModeChangeEvent) {
+    @HandlesEvent
+    fun modeChange(event: ModeChangeEvent) {
         modes[event.value[0].modeIndex].let {
             mode = it
 
@@ -240,7 +246,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
-    @HandlesEvent fun put(event: PutEvent) {
+    @HandlesEvent
+    fun put(event: PutEvent) {
         if (DumbService.getInstance(editor.project!!).isDumb) return
 
         val line = cursorRow
@@ -299,7 +306,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         cursorCol += event.value.size
     }
 
-    @HandlesEvent fun scroll(event: ScrollEvent) {
+    @HandlesEvent
+    fun scroll(event: ScrollEvent) {
         val region = currentScrollRegion
         for (scroll in event.value) {
             val scrollAmount = scroll.value
@@ -337,7 +345,8 @@ class NeojetEnhancedEditorFacade private constructor(val editor: Editor) : Dispo
         }
     }
 
-    @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
+    @HandlesEvent
+    fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
         System.out.println("setScrollRegion($currentScrollRegion)")
     }

@@ -47,6 +47,9 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
 
     private val messageBusConnection: MessageBusConnection
 
+    // FIXME
+    val visibleLines: IntRange = 0..0
+
     init {
         subs.addAll(
             nvim.bufferedRedrawEvents()

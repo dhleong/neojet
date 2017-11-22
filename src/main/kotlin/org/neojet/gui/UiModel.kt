@@ -13,8 +13,8 @@ import io.neovim.java.event.redraw.SetScrollRegionEvent
 import io.neovim.java.event.redraw.UnknownRedrawEvent
 import io.neovim.java.event.redraw.UpdateColorEvent
 import io.neovim.java.util.ModeInfo
-import org.neojet.EventDispatcher
-import org.neojet.HandlesEvent
+import org.neojet.util.EventDispatcher
+import org.neojet.util.HandlesEvent
 import org.neojet.util.Matrix
 import java.awt.Color
 
@@ -100,7 +100,7 @@ class UiModel {
     val currentMode: ModeInfo?
         get() = mode
 
-    private lateinit var modes: List<ModeInfo>
+    private var modes: List<ModeInfo> = emptyList()
     private var mode: ModeInfo? = null
 
     fun resize(rows: Int, cols: Int) {
@@ -108,7 +108,8 @@ class UiModel {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    @HandlesEvent fun clearScreen(event: ClearScreenEvent) {
+    @HandlesEvent
+    fun clearScreen(event: ClearScreenEvent) {
         for (line in 0 until cells.rows) {
             clearToEol(line, 0)
         }
@@ -117,7 +118,8 @@ class UiModel {
         cursorLine = 0
     }
 
-    @HandlesEvent fun clearToEol(event: EolClearEvent) {
+    @HandlesEvent
+    fun clearToEol(event: EolClearEvent) {
         event.value.forEach {
             clearToEol(cursorLine, cursorCol)
         }
@@ -132,32 +134,41 @@ class UiModel {
         }
     }
 
-    @HandlesEvent fun cursorGoto(event: CursorGotoEvent) {
+    @HandlesEvent
+    fun cursorGoto(event: CursorGotoEvent) {
         // NOTE: there's only ever one
         cursorLine = event.value[0].row()
         cursorCol = event.value[0].col()
     }
 
-    @HandlesEvent fun onModeInfoSet(event: ModeInfoSetEvent) {
+    @HandlesEvent
+    fun onModeInfoSet(event: ModeInfoSetEvent) {
         modes = event.value[0].modes
     }
 
-    @HandlesEvent fun onModeChange(event: ModeChangeEvent) {
-        modes[event.value[0].modeIndex].let {
-            mode = it
+    @HandlesEvent
+    fun onModeChange(event: ModeChangeEvent) {
+        val index = event.value[0].modeIndex
+        if (index < modes.size) {
+            modes[index].let {
+                mode = it
+            }
         }
     }
 
-    @HandlesEvent fun setHighlight(event: HighlightSetEvent) {
+    @HandlesEvent
+    fun setHighlight(event: HighlightSetEvent) {
         for (ev in event.value) {
             currentAttrs.setFrom(ev.value, defaults = defaultAttrs)
         }
     }
 
-    @HandlesEvent fun onUnknown(event: UnknownRedrawEvent) =
+    @HandlesEvent
+    fun onUnknown(event: UnknownRedrawEvent) =
         System.out.println("Unknown redraw event: $event")
 
-    @HandlesEvent fun put(event: PutEvent) {
+    @HandlesEvent
+    fun put(event: PutEvent) {
         event.value.forEach {
             if (cursorCol < cells.cols) {
                 cells[cursorLine, cursorCol].apply {
@@ -170,13 +181,15 @@ class UiModel {
         }
     }
 
-    @HandlesEvent fun resize(event: ResizeEvent) {
+    @HandlesEvent
+    fun resize(event: ResizeEvent) {
         event.value.last().let { size ->
             resize(size.y(), size.x())
         }
     }
 
-    @HandlesEvent fun scroll(event: ScrollEvent) {
+    @HandlesEvent
+    fun scroll(event: ScrollEvent) {
 
         val region = currentScrollRegion
         for (scroll in event.value) {
@@ -214,11 +227,13 @@ class UiModel {
         }
     }
 
-    @HandlesEvent fun setScrollRegion(event: SetScrollRegionEvent) {
+    @HandlesEvent
+    fun setScrollRegion(event: SetScrollRegionEvent) {
         currentScrollRegion = event.value.last()
     }
 
-    @HandlesEvent fun updateColor(event: UpdateColorEvent) {
+    @HandlesEvent
+    fun updateColor(event: UpdateColorEvent) {
         // NOTE: there's only ever one
         val newColor = Color(event.value[0].color)
         when (event.redrawType) {

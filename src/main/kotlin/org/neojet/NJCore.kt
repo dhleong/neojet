@@ -12,11 +12,12 @@ import com.intellij.openapi.vfs.VirtualFile
 import io.neovim.java.IntPair
 import io.neovim.java.Neovim
 import io.neovim.java.Rpc
-import io.neovim.java.rpc.NotificationPacket
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.events.registerCustomEvents
 import org.neojet.gui.UiThreadScheduler
+import org.neojet.integrate.VimEventHandler
 import org.neojet.integrate.sourceRes
+import org.neojet.util.BufferManager
 import org.neojet.util.absoluteLocalFile
 import org.neojet.util.component1
 import org.neojet.util.component2
@@ -47,9 +48,12 @@ class NJCore : ApplicationComponent, Disposable {
         var isTestMode: Boolean = false
     }
 
-    private val logger = Logger.getLogger("NeoJet:NJCore")!!
+    private val logger = Logger.getLogger("neojet:NJCore")!!
 
     var nvim: Neovim? = null
+
+    private val buffers = BufferManager()
+    private val vimEventHandler = VimEventHandler(buffers)
 
     private var refs = AtomicInteger(0)
     private val subs = CompositeDisposable()
@@ -87,14 +91,14 @@ class NJCore : ApplicationComponent, Disposable {
 
         this.nvim = nvim
 
-        nvim.sourceRes("vim/init.vim")
+        nvim.sourceRes("vim/neojet.vim")
             .blockingGet()
 
         subs.add(
             nvim.notifications()
                 .filter { it.event != "redraw" }
                 .observeOn(UiThreadScheduler.instance)
-                .subscribe(this::onNotification)
+                .subscribe(vimEventHandler::dispatch)
         )
 
         @Suppress("ConstantConditionIf")
@@ -125,6 +129,9 @@ class NJCore : ApplicationComponent, Disposable {
             ))
 
             editor.panel.isAttachedToUi = true
+
+            val buffer = editor.editor.getUserData(NVIM_BUFFER_KEY)!!
+            buffers.add(buffer, editor)
 
             return nvim
         }
@@ -197,12 +204,9 @@ class NJCore : ApplicationComponent, Disposable {
 
         val filePath = vFile.absoluteLocalFile.absolutePath
         nvim.command("e! $filePath").blockingGet()
+
         val buf = nvim.current.buffer().blockingGet()
         editor.putUserData(NVIM_BUFFER_KEY, buf)
-    }
-
-    internal fun onNotification(packet: NotificationPacket<Any>) {
-        System.out.println("TODO handle $packet")
     }
 
 }

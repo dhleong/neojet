@@ -29,10 +29,9 @@ val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
  * @author dhleong
  */
 class NeojetTextFileEditor(
-    private val project: Project,
+    val project: Project,
     val vFile: VirtualFile
-)
-        : UserDataHolderBase(), FileEditor, TextEditor {
+) : UserDataHolderBase(), FileEditor, TextEditor {
 
     private val editor: TextEditor = createEditor(project, vFile)
 
@@ -118,8 +117,9 @@ class NeojetTextFileEditor(
     }
 
     override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? {
-        System.out.println("TODO getBackgroundHighlighter")
+//        System.out.println("TODO getBackgroundHighlighter")
         return myBackgroundHighlighter
+//        return null
     }
 
     override fun getCurrentLocation(): FileEditorLocation? {

@@ -56,6 +56,16 @@ public final class EventsManager {
         return names[0];
     }
 
+    public @Nonnull Class<?> getEventType(String eventName) {
+        Class<?> eventClass = eventClassCache.get(eventName);
+        if (eventClass == null) {
+            throw new IllegalArgumentException(
+                "Unregistered event type: " + eventName
+            );
+        }
+        return eventClass;
+    }
+
     public @Nonnull JavaType getEventValueType(String eventName) {
         //noinspection ConstantConditions never returns null with allowNull: false
         return getEventValueType(eventName, false);
