@@ -1,5 +1,6 @@
 package io.neovim.java.rpc;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.event.EventName;
@@ -39,17 +40,53 @@ public class PacketTest {
         );
 
         assertThat(packet)
-            .isInstanceOf(NotificationPacket.class)
+            .isInstanceOf(NotificationListPacket.class)
             .hasType(Packet.Type.NOTIFICATION);
         assertThat((NotificationPacket) packet)
             .hasEvent("takeoff")
-            .hasArgs(listFromJson("[12, 34]").toArray());
+            .hasArgs(Arrays.asList(12, 34));
+//            .hasArgs(listFromJson("[12, 34]"));
 //            .hasArgs(nodeFromJson("[12, 34]"));
     }
 
 
     @EventName("takeoff")
-    static class TakeoffEvent extends NotificationPacket<Integer> {
+    static class TakeoffListEvent extends NotificationListPacket<Integer> {
+    }
+
+    @Test
+    public void readCustomListNotification() throws IOException {
+        MessageBufferPacker pack = MessagePack.newDefaultBufferPacker();
+        pack.packArrayHeader(3);
+        pack.packInt(Packet.Type.NOTIFICATION.ordinal());
+        pack.packString("takeoff");
+        pack.packArrayHeader(2);
+        pack.packInt(12);
+        pack.packInt(34);
+
+        EventsManager eventsManager = new EventsManager();
+        eventsManager.register(TakeoffListEvent.class);
+        ObjectMapper mapper = NeovimObjectMapper.newInstance(eventsManager, true);
+        Packet packet = mapper.readValue(
+            pack.toByteArray(),
+            Packet.class
+        );
+
+        assertThat(packet)
+            .isInstanceOf(TakeoffListEvent.class)
+            .hasType(Packet.Type.NOTIFICATION);
+        assertThat((TakeoffListEvent) packet)
+            .hasEvent("takeoff")
+            .hasArgs(Arrays.asList(12, 34));
+    }
+
+    @EventName("takeoff")
+    static class TakeoffEvent extends NotificationPacket<TakeoffEvent.Arg> {
+        @JsonFormat(shape = JsonFormat.Shape.ARRAY)
+        static class Arg {
+            public int first;
+            public int second;
+        }
     }
 
     @Test
@@ -64,7 +101,7 @@ public class PacketTest {
 
         EventsManager eventsManager = new EventsManager();
         eventsManager.register(TakeoffEvent.class);
-        ObjectMapper mapper = NeovimObjectMapper.newInstance(eventsManager);
+        ObjectMapper mapper = NeovimObjectMapper.newInstance(eventsManager, true);
         Packet packet = mapper.readValue(
             pack.toByteArray(),
             Packet.class
@@ -74,13 +111,14 @@ public class PacketTest {
             .isInstanceOf(TakeoffEvent.class)
             .hasType(Packet.Type.NOTIFICATION);
         assertThat((TakeoffEvent) packet)
-            .hasEvent("takeoff")
-            .hasArgs(12, 34);
+            .hasEvent("takeoff");
+        assertThat(((TakeoffEvent) packet).args.first).isEqualTo(12);
+        assertThat(((TakeoffEvent) packet).args.second).isEqualTo(34);
     }
 
     @Test
     public void writeNotification() throws IOException {
-        NotificationPacket<JsonNode> notif = NotificationPacket.createFromList(
+        NotificationPacket<JsonNode> notif = NotificationPacket.create(
             "landing",
             nodeFromJson("[42, 9001]")
         );

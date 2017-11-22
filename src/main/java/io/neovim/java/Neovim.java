@@ -1,5 +1,6 @@
 package io.neovim.java;
 
+import io.neovim.java.rpc.NotificationListPacket;
 import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
@@ -133,6 +134,16 @@ public class Neovim implements Closeable {
      */
     public <R, T extends NotificationPacket<R>> Flowable<R> notifications(
             @Nonnull Class<T> eventType) {
+        String eventName = rpc.eventsManager.getEventName(eventType);
+
+        //noinspection unchecked
+        return notifications()
+            .filter(notif -> eventName.equals(notif.event))
+            .map(notif -> ((T) notif).value());
+    }
+
+    public <R, T extends NotificationListPacket<R>> Flowable<R> listNotifications(
+        @Nonnull Class<T> eventType) {
         String eventName = rpc.eventsManager.getEventName(eventType);
 
         //noinspection unchecked

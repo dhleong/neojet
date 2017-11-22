@@ -1,7 +1,6 @@
 package io.neovim.java.rpc;
 
 import org.assertj.core.api.AbstractAssert;
-import org.assertj.core.internal.Iterables;
 import org.assertj.core.util.Objects;
 
 /**
@@ -28,87 +27,27 @@ public class NotificationPacketAssert extends AbstractAssert<NotificationPacketA
   }
 
   /**
-   * Verifies that the actual NotificationPacket's args contains the given Object elements.
-   * @param args the given elements that should be contained in actual NotificationPacket's args.
+   * Verifies that the actual NotificationPacket's args is equal to the given one.
+   * @param args the given args to compare the actual NotificationPacket's args to.
    * @return this assertion object.
-   * @throws AssertionError if the actual NotificationPacket's args does not contain all given Object elements.
+   * @throws AssertionError - if the actual NotificationPacket's args is not equal to the given one.
    */
-  public NotificationPacketAssert hasArgs(Object... args) {
+  public NotificationPacketAssert hasArgs(Object args) {
     // check that actual NotificationPacket we want to make assertions on is not null.
     isNotNull();
 
-    // check that given Object varargs is not null.
-    if (args == null) failWithMessage("Expecting args parameter not to be null.");
+    // overrides the default error message with a more explicit one
+    String assertjErrorMessage = "\nExpecting args of:\n  <%s>\nto be:\n  <%s>\nbut was:\n  <%s>";
     
-    // check with standard error message, to set another message call: info.overridingErrorMessage("my error message");
-    Iterables.instance().assertContains(info, actual.args, args);
-
-    // return the current assertion for method chaining
-    return this;
-  }
-
-  /**
-   * Verifies that the actual NotificationPacket's args contains <b>only<b> the given Object elements and nothing else in whatever order.
-   * @param args the given elements that should be contained in actual NotificationPacket's args.
-   * @return this assertion object.
-   * @throws AssertionError if the actual NotificationPacket's args does not contain all given Object elements.
-   */
-  public NotificationPacketAssert hasOnlyArgs(Object... args) {
-    // check that actual NotificationPacket we want to make assertions on is not null.
-    isNotNull();
-
-    // check that given Object varargs is not null.
-    if (args == null) failWithMessage("Expecting args parameter not to be null.");
-    
-    // check with standard error message, to set another message call: info.overridingErrorMessage("my error message");
-    Iterables.instance().assertContainsOnly(info, actual.args, args);
-
-    // return the current assertion for method chaining
-    return this;
-  }
-
-  /**
-   * Verifies that the actual NotificationPacket's args does not contain the given Object elements.
-   *
-   * @param args the given elements that should not be in actual NotificationPacket's args.
-   * @return this assertion object.
-   * @throws AssertionError if the actual NotificationPacket's args contains any given Object elements.
-   */
-  public NotificationPacketAssert doesNotHaveArgs(Object... args) {
-    // check that actual NotificationPacket we want to make assertions on is not null.
-    isNotNull();
-
-    // check that given Object varargs is not null.
-    if (args == null) failWithMessage("Expecting args parameter not to be null.");
-    
-    // check with standard error message (use overridingErrorMessage before contains to set your own message).
-    Iterables.instance().assertDoesNotContain(info, actual.args, args);
-
-    // return the current assertion for method chaining
-    return this;
-  }
-
-  /**
-   * Verifies that the actual NotificationPacket has no args.
-   * @return this assertion object.
-   * @throws AssertionError if the actual NotificationPacket's args is not empty.
-   */
-  public NotificationPacketAssert hasNoArgs() {
-    // check that actual NotificationPacket we want to make assertions on is not null.
-    isNotNull();
-
-    // we override the default error message with a more explicit one
-    String assertjErrorMessage = "\nExpecting :\n  <%s>\nnot to have args but had :\n  <%s>";
-    
-    // check
-    if (actual.args.iterator().hasNext()) {
-      failWithMessage(assertjErrorMessage, actual, actual.args);
+    // null safe check
+    Object actualArgs = actual.args;
+    if (!Objects.areEqual(actualArgs, args)) {
+      failWithMessage(assertjErrorMessage, actual, args, actualArgs);
     }
-    
+
     // return the current assertion for method chaining
     return this;
   }
-  
 
   /**
    * Verifies that the actual NotificationPacket's event is equal to the given one.

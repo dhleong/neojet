@@ -43,7 +43,7 @@ public class NeovimTest extends EmbeddedNeovimTest {
                 .blockingGet()
         ).isEqualTo("\ntest");
 
-        List<RedrawSubEvent<?>> subEvents = nvim.notifications(RedrawEvent.class)
+        List<RedrawSubEvent<?>> subEvents = nvim.listNotifications(RedrawEvent.class)
             .buffer(1, TimeUnit.SECONDS, 10)
             .timeout(5, TimeUnit.SECONDS)
             .firstOrError()

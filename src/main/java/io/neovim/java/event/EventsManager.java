@@ -3,6 +3,7 @@ package io.neovim.java.event;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.intellij.util.ParameterizedTypeImpl;
+import io.neovim.java.rpc.NotificationListPacket;
 import io.neovim.java.rpc.NotificationPacket;
 
 import javax.annotation.Nonnull;
@@ -92,33 +93,43 @@ public final class EventsManager {
     @Nonnull JavaType getJavaTypeForPacket(ParameterizedType packetType) {
         Type eventValueType = packetType.getActualTypeArguments()[0];
         JavaType javaType = factory.constructType(eventValueType);
-        if (packetType.getRawType() != NotificationPacket.class) {
+        if (packetType.getRawType() != NotificationListPacket.class) {
             return javaType;
         }
 
-        // notification packets are special since the the java type
+        // notification list packets are special since the the java type
         // is automatically a list of whatever was provided
         return factory.constructCollectionType(List.class, javaType);
     }
 
     static @Nonnull ParameterizedType getNotificationPacketType(Type base) {
         Type inputType = base;
+        Type childType = null;
         do {
             if (base instanceof ParameterizedType) {
                 ParameterizedType parameterized = (ParameterizedType) base;
-                if (parameterized.getRawType() == NotificationPacket.class) {
+                if (parameterized.getRawType() == NotificationListPacket.class
+                        || parameterized.getRawType() == NotificationPacket.class) {
+
+                    if (childType instanceof ParameterizedType) {
+                        Type typeVarValue = ((ParameterizedType) childType).getActualTypeArguments()[0];
+                        return fillTypeVarWith(parameterized, typeVarValue);
+                    }
+
                     return parameterized;
                 }
 
                 ParameterizedType fromInterface = checkInterfaces(base);
                 if (fromInterface != null) return fillTypeVars(fromInterface, parameterized);
 
+                childType = base;
                 Class<?> asClass = ((Class<?>) ((ParameterizedType) base).getRawType());
                 base = asClass.getGenericSuperclass();
             } else {
                 ParameterizedType fromInterface = checkInterfaces(base);
                 if (fromInterface != null) return fromInterface;
 
+                childType = base;
                 Class<?> asClass = (Class<?>) base;
                 base = asClass.getGenericSuperclass();
             }
@@ -126,6 +137,36 @@ public final class EventsManager {
 
         throw new IllegalStateException(
             inputType + " does not extend NotificationPacket or Event");
+    }
+
+    /**
+     * Given a type like <code>Notification&lt;BufferEvent&lt;T&gt;&gt;</code>,
+     *  create a new ParameterizedType with that <code>T</code> filled in with the
+     *  provided variableType
+     *
+     * @param type
+     * @param variableType
+     */
+    private static ParameterizedType fillTypeVarWith(
+            ParameterizedType type,
+            Type variableType) {
+        Type[] typeArgs = type.getActualTypeArguments();
+        if (typeArgs[0] instanceof TypeVariable) {
+            // NOTE this is very lazy and non-thorough...
+            return new ParameterizedTypeImpl(
+                type.getRawType(),
+                variableType
+            );
+        }
+
+        if (!(typeArgs[0] instanceof ParameterizedType)) {
+            return type; // no change
+        }
+
+        return new ParameterizedTypeImpl(
+            type,
+            fillTypeVarWith((ParameterizedType) typeArgs[0], variableType)
+        );
     }
 
     private static ParameterizedType fillTypeVars(

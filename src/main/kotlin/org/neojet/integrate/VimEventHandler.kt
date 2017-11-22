@@ -32,7 +32,7 @@ class VimEventHandler(
         val editor = buffers.textFileEditorForBuffer(buffer)
             ?: return logger.log(Level.WARNING, "No editor for $event")
 
-        System.out.println("onTextChanged @${editor.vFile}")
+        System.out.println("onTextChanged @${editor.vFile}: ${event.arg}")
 
         // TODO update the file; changes could be provided with the event
 //        runUndoTransparentWriteAction {

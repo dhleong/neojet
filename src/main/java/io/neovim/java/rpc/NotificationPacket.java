@@ -1,23 +1,27 @@
 package io.neovim.java.rpc;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.event.Event;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
+ * Base class for Notification RPC messages. Custom events
+ *  can subclass this, but their argument type MUST either
+ *  be a {@link java.util.List}—in which case, you should
+ *  prefer to subclass {@link NotificationListPacket}—or be
+ *  annotated with:
+ *
+ *  <code>
+ *   {@literal @}JsonFormat(shape = JsonFormat.Shape.ARRAY)
+ *  </code>
+ *
  * @author dhleong
  */
 public class NotificationPacket<T>
         extends Packet
-        implements Event<List<T>> {
+        implements Event<T> {
     public String event;
-    public List<T> args;
+    public T args;
 
-    protected NotificationPacket() {
+    public NotificationPacket() {
         type = Type.NOTIFICATION;
     }
 
@@ -27,7 +31,7 @@ public class NotificationPacket<T>
     }
 
     @Override
-    public List<T> value() {
+    public T value() {
         return args;
     }
 
@@ -59,34 +63,13 @@ public class NotificationPacket<T>
             '}';
     }
 
-    public static <T> NotificationPacket<T> create(String event, Class<?> eventType, List<T> args) {
-        final NotificationPacket<T> inflated = inflateEmpty(eventType);
-        final NotificationPacket<T> p = inflated == null
-            ? new NotificationPacket<>()
-            : inflated;
+    public static <T> NotificationPacket<T> create(String event, T args) {
+        return create(event, new NotificationPacket<>(), args);
+    }
 
+    public static <T> NotificationPacket<T> create(String event, NotificationPacket<T> p, T args) {
         p.event = event;
         p.args = args;
         return p;
-    }
-
-    private static ObjectMapper mapper = new ObjectMapper();
-    private static <T> NotificationPacket<T> inflateEmpty(Class<?> eventType) {
-        try {
-            //noinspection unchecked
-            return mapper.readValue("[]", (Class<NotificationPacket<T>>) eventType);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    public static NotificationPacket<JsonNode> createFromList(String event, JsonNode node) {
-        final int size = node.size();
-        ArrayList<JsonNode> result = new ArrayList<>(size);
-        for (int i=0; i < size; ++i) {
-            result.add(node.get(i));
-        }
-        return create(event, NotificationPacket.class, result);
     }
 }

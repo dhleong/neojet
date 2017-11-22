@@ -12,7 +12,7 @@ public class CurrentObjectsTest extends EmbeddedNeovimTest {
     @Before
     public void setUp() throws Exception {
         super.setUp();
-        nvimCommand("e serenity.ship");
+        nvimCommand("e serenity.firefly");
     }
 
     @Test
@@ -21,7 +21,7 @@ public class CurrentObjectsTest extends EmbeddedNeovimTest {
         assertThat(b).isNotNull();
 
         assertThat(b.name().blockingGet())
-            .endsWith("/serenity.ship");
+            .endsWith("/serenity.firefly");
     }
 
     @Test

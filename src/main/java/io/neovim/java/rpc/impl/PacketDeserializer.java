@@ -8,7 +8,9 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.neovim.java.event.EventsManager;
+import io.neovim.java.rpc.NotificationListPacket;
 import io.neovim.java.rpc.NotificationPacket;
 import io.neovim.java.rpc.Packet;
 import io.neovim.java.rpc.RequestPacket;
@@ -30,6 +32,8 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
     private final Map<Integer, Class<?>> requestedTypes;
     private final EventsManager eventsManager;
     private final boolean debug;
+
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public PacketDeserializer(
         Map<Integer, Class<?>> requestedTypes,
@@ -71,6 +75,7 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
         return packet;
     }
 
+    @SuppressWarnings("unchecked")
     Packet readNotification(JsonParser p) throws IOException {
         final String event = nextString(p);
         final JavaType type = eventsManager.getEventValueType(event, true);
@@ -87,14 +92,23 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
 
         try {
             if (type == null) {
-                return NotificationPacket.createFromList(event,
-                    nextValue(actualParser, JsonNode.class));
+                return NotificationPacket.create(event,
+                    new NotificationListPacket<>(),
+                    (List<JsonNode>) nextValue(actualParser));
             } else {
-                //noinspection unchecked
+                Class<?> eventType = eventsManager.getEventType(event);
+                if (NotificationListPacket.class.isAssignableFrom(eventType)) {
+                    return NotificationListPacket.create(
+                        event,
+                        inflateEmptyList((Class) eventType),
+                        nextValue(actualParser, type)
+                    );
+                }
+
                 return NotificationPacket.create(
                     event,
-                    eventsManager.getEventType(event),
-                    (List) nextValue(actualParser, type)
+                    inflateEmpty((Class) eventType),
+                    nextValue(actualParser, type)
                 );
             }
         } catch (JsonMappingException|JsonParseException e) {
@@ -104,6 +118,28 @@ public class PacketDeserializer extends JsonDeserializer<Packet> {
             throw JsonMappingException.from(p,
                 "Failed to parse:\n\n    " + triedtoParse + "\n\n as " + (type == null ? "JsonNode" : type),
                 e);
+        }
+    }
+
+    <T> NotificationPacket<T> inflateEmpty(Class<NotificationPacket<T>> type) {
+        try {
+            //noinspection unchecked
+            return mapper.readValue("[]", type);
+        } catch (IOException e) {
+            e.printStackTrace();
+
+            return new NotificationPacket<>();
+        }
+    }
+
+    <T> NotificationPacket<List<T>> inflateEmptyList(Class<NotificationPacket<List<T>>> type) {
+        try {
+            //noinspection unchecked
+            return mapper.readValue("[]", type);
+        } catch (IOException e) {
+            e.printStackTrace();
+
+            return new NotificationListPacket<>();
         }
     }
 

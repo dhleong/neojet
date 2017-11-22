@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
  */
 
 fun Neovim.bufferedRedrawEvents(): Flowable<List<RedrawSubEvent<*>>> {
-    return notifications(RedrawEvent::class.java)
+    return listNotifications(RedrawEvent::class.java)
         .buffer(10, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
 //        .window(10, TimeUnit.MILLISECONDS, Schedulers.io(), 32)
         // buffer into a List, but assuming either an empty or singleton

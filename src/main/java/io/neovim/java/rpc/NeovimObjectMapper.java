@@ -23,11 +23,11 @@ public class NeovimObjectMapper {
     }
 
     public static ObjectMapper newInstance() {
-        return newInstance(new EventsManager());
+        return newInstance(new EventsManager(), false);
     }
 
-    public static ObjectMapper newInstance(EventsManager eventsManager) {
-        return newInstance(null, Collections.emptyMap(), eventsManager, false);
+    public static ObjectMapper newInstance(EventsManager eventsManager, boolean debug) {
+        return newInstance(null, Collections.emptyMap(), eventsManager, debug);
     }
 
     public static ObjectMapper newInstance(

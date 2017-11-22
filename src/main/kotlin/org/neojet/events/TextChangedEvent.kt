@@ -6,7 +6,15 @@ import io.neovim.java.event.EventName
  * @author dhleong
  */
 @EventName("text_changed")
-class TextChangedEvent : BufferEvent<Unit>() {
+class TextChangedEvent : BufferEvent<TextChangedEvent.Change>() {
+
+    data class Change(
+        var type: String = "",
+        var start: Int = 0,
+        var end: Int = 0,
+        var text: String = ""
+    )
+
     override fun toString(): String =
         "TextChangedEvent(buf=$bufferId)"
 }

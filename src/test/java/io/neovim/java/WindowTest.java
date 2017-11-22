@@ -15,7 +15,7 @@ public class WindowTest extends EmbeddedNeovimTest {
     public void setUp() throws Exception {
         super.setUp();
 
-        nvimCommand("e serenity.ship");
+        nvimCommand("e serenity.firefly");
         window = nvim.current.window().blockingGet();
         Buffer buffer = window.buffer().blockingGet();
 
