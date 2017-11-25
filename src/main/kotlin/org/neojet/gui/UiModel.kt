@@ -28,7 +28,7 @@ data class Cell(
 ) {
     fun setFrom(other: Cell) {
         value = other.value
-        attrs = other.attrs
+        attrs.setFrom(other.attrs)
     }
 }
 
