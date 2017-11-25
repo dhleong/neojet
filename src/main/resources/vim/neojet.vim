@@ -38,15 +38,6 @@ fun! neojet#hl_update(bufnr, list)
     if exists('g:ale_enabled')
         " integrate with ALE
         call ale#engine#SetResults(a:bufnr, a:list)
-        " call ale#sign#SetSigns(a:bufnr, a:list)
-        " call ale#list#SetLists(a:bufnr, a:list)
-        " call ale#highlight#SetHighlights(a:bufnr, a:list)
-        "
-        " if g:ale_echo_cursor
-        "     " Try and echo the warning now.
-        "     " This will only do something meaningful if we're in normal mode.
-        "     call ale#cursor#EchoCursorWarning()
-        " endif
         return
     endif
 
