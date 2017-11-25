@@ -37,6 +37,14 @@ fun! neojet#hl_update(bufnr, list)
 
     if exists('g:ale_enabled')
         " integrate with ALE
+        if !exists('g:ale_buffer_info')
+            let g:ale_buffer_info = {}
+        endif
+        if ale#engine#InitBufferInfo(a:bufnr)
+            let b:ale_linters = {'java': ['neojet']}
+        endif
+
+        let g:ale_buffer_info[a:bufnr].loclist = a:list
         call ale#engine#SetResults(a:bufnr, a:list)
         return
     endif
@@ -60,7 +68,8 @@ fun! neojet#hl_create(bufnr, id, start, end, desc, severity)
                  \ 'end_lnum': l:end_lnum,
                  \ 'end_col': l:end_col - 1,
                  \ 'text': a:desc,
-                 \ 'type': a:severity[0]
+                 \ 'type': a:severity[0],
+                 \ 'linter_name': 'neojet',
                  \ }]
     call neojet#hl_update(a:bufnr, l:list)
 endfun
@@ -112,3 +121,19 @@ augroup neojet_autocmds
 augroup END
 
 let g:neojet#version = 1
+
+
+" prepare ALE compat layer, if necessary
+fun! neojet#_AleCallback()
+endfun
+
+if exists('g:ale_enabled') && !get(g:, '_neojet_init')
+    call ale#linter#Define('java', {
+        \ 'name': 'neojet',
+        \ 'callback': 'neojet#_AleCallback',
+        \ 'command_callback': 'neojet#_AleCallback',
+        \ 'executable_callback': 'neojet#_AleCallback',
+        \ })
+endif
+
+let g:_neojet_init = 1
