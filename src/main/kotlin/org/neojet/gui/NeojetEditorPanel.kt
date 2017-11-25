@@ -213,6 +213,11 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         val offset = g.getFontMetrics(g.font).descent
         g.drawString(cell.value, 0, cellHeight - offset)
 
+        if (cell.attrs.undercurl) {
+            // TODO curly
+            g.drawLine(0, cellHeight, cellWidth, cellHeight)
+        }
+
         if (hasCursor && cursorShape == ModeInfo.CursorShape.VERTICAL) {
 
             // TODO is this the right color?

@@ -1,4 +1,6 @@
 
+let s:loclist_var= '_neojet_loclist'
+
 let s:rpcnotify = function('rpcnotify')
 
 fun! neojet#rpc(method, ...)
@@ -13,33 +15,69 @@ fun! neojet#bvent(event, ...)
 endfun
 
 fun! neojet#offset2lc(offset)
-    let l:lnum = byte2line(a:offset)
+    " IntelliJ offsets are 0-based, but vim's are 1-based;
+    "  byte2line(0) -> -1
+    let l:offset = a:offset + 1
+    let l:lnum = byte2line(l:offset)
     let l:lineStartOffset = line2byte(l:lnum)
-    let l:col = a:offset - l:lineStartOffset
-    return [l:lnum, l:col]
+    let l:col = l:offset - l:lineStartOffset
+
+    " vim's cols are also 1-based, but this math is 0-based
+    return [l:lnum, l:col + 1]
 endfun
 
+" FIXME move these to an appropriate autoload directory,
+" and come up with a clever way to externalize them from
+" the JAR at runtime, and for Vim to then load them
+" (for the latter we can probably just add the right path
+" to the runtime)
+
+fun! neojet#hl_update(bufnr, list)
+    call setbufvar(a:bufnr, s:loclist_var, a:list)
+
+    if exists('g:ale_enabled')
+        " integrate with ALE
+        call ale#engine#SetResults(a:bufnr, a:list)
+        " call ale#sign#SetSigns(a:bufnr, a:list)
+        " call ale#list#SetLists(a:bufnr, a:list)
+        " call ale#highlight#SetHighlights(a:bufnr, a:list)
+        "
+        " if g:ale_echo_cursor
+        "     " Try and echo the warning now.
+        "     " This will only do something meaningful if we're in normal mode.
+        "     call ale#cursor#EchoCursorWarning()
+        " endif
+        return
+    endif
+
+    " TODO if no ALE, do it ourselves?
+    call setloclist(bufwinnr(a:bufnr), a:list, 'r')
+endfun
 
 fun! neojet#hl_create(bufnr, id, start, end, desc, severity)
     let l:winnr = bufwinnr(a:bufnr)
 
     let [l:lnum, l:col] = neojet#offset2lc(a:start)
+    let [l:end_lnum, l:end_col] = neojet#offset2lc(a:end)
 
-    let l:list = [{'bufnr': a:bufnr,
+    " the end_col is the offset *after* the end, so -1
+    let l:list = getbufvar(a:bufnr, s:loclist_var, []) +
+               \ [{'bufnr': a:bufnr,
                  \ 'nr': a:id,
                  \ 'lnum': l:lnum,
                  \ 'col': l:col,
+                 \ 'end_lnum': l:end_lnum,
+                 \ 'end_col': l:end_col - 1,
                  \ 'text': a:desc,
                  \ 'type': a:severity[0]
                  \ }]
-    call setloclist(l:winnr, l:list, 'a')
+    call neojet#hl_update(a:bufnr, l:list)
 endfun
 
 fun! neojet#hl_delete(bufnr, id, start, end, desc, severity)
-    let l:winnr = bufwinnr(a:bufnr)
-    let l:list = getloclist(l:winnr)
+    let l:list = getbufvar(a:bufnr, s:loclist_var, [])
     call filter(l:list, 'v:val.nr != ' . a:id)
-    call setloclist(l:winnr, l:list, 'r')
+    call neojet#hl_update(a:bufnr, l:list)
 endfun
 
 
