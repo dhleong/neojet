@@ -25,6 +25,7 @@ import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.font.TextAttribute
+import java.awt.geom.QuadCurve2D
 import javax.swing.JPanel
 
 /**
@@ -47,8 +48,7 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
 
     private val messageBusConnection: MessageBusConnection
 
-    // FIXME
-    val visibleLines: IntRange = 0..0
+    private val undercurlArtist = QuadCurve2D.Double()
 
     init {
         subs.addAll(
@@ -201,7 +201,7 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         g.fillRect(0, 0, cellWidth, cellHeight)
     }
 
-    internal fun paintCellFg(g: Graphics, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
+    internal fun paintCellFg(g: Graphics2D, cell: Cell, cellWidth: Int, cellHeight: Int, hasCursor: Boolean) {
         val cursorShape = uiModel.currentMode?.cursorShape ?: ModeInfo.CursorShape.BLOCK
         if (hasCursor && cursorShape == ModeInfo.CursorShape.BLOCK) {
             g.color = cell.attrs.fg.inverted()
@@ -214,8 +214,8 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         g.drawString(cell.value, 0, cellHeight - offset)
 
         if (cell.attrs.undercurl) {
-            // TODO curly
-            g.drawLine(0, cellHeight, cellWidth, cellHeight)
+            // draw the "undercurl"
+            g.draw(undercurlArtist)
         }
 
         if (hasCursor && cursorShape == ModeInfo.CursorShape.VERTICAL) {
@@ -268,6 +268,14 @@ class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
         val windowWidth = cols * cellWidth
 
         val oldTransform = g.transform
+
+        val curveBottom = cellHeight * 0.97
+        val curveTop = cellHeight * 0.77
+        undercurlArtist.setCurve(
+            0.0, curveBottom,
+            cellWidth * 0.5, curveTop,
+            cellWidth.toDouble(), curveBottom
+        )
 
         for (y in 0 until rows) {
             for (x in 0 until cols) {
