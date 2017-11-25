@@ -1,5 +1,6 @@
 package org.neojet.integrate
 
+import com.intellij.openapi.application.runUndoTransparentWriteAction
 import io.neovim.java.event.Event
 import org.neojet.events.TextChangedEvent
 import org.neojet.util.BufferManager
@@ -32,12 +33,37 @@ class VimEventHandler(
         val editor = buffers.textFileEditorForBuffer(buffer)
             ?: return logger.log(Level.WARNING, "No editor for $event")
 
-        System.out.println("onTextChanged @${editor.vFile}: ${event.arg}")
+        val change = event.arg
+        System.out.println("onTextChanged @${editor.vFile}: $change")
 
-        // TODO update the file; changes could be provided with the event
-//        runUndoTransparentWriteAction {
-//            PsiManager.getInstance(editor.project)
-//                .findFile(editor.vFile)!!.subtreeChanged()
-//        }
+        editor.isModifiedFlag = change.mod
+
+        runUndoTransparentWriteAction {
+            if (!change.mod) {
+                // the file is persisted to disk; just refresh
+                editor.vFile.refresh(true, false)
+            } else if (change.type == "incremental") {
+                // replace a range
+//                val doc = editor.editor.document
+//                val start = doc.getLineStartOffset(change.start)
+//                val end = doc.getLineEndOffset(change.end)
+//                doc.replaceString(start, end, change.text)
+            } else {
+                // load a text range from the buffer
+                // TODO:
+//                buffer.lines(change.start, change.end)
+//                    .get()
+//                    .reduce(StringBuilder()) { builder, line ->
+//                        builder.append(line)
+//                    }
+//                    .observeOn(UiThreadScheduler.instance)
+//                    .subscribe { lines -> runUndoTransparentWriteAction {
+//                        val doc = editor.editor.document
+//                        val start = doc.getLineStartOffset(change.start)
+//                        val end = doc.getLineEndOffset(change.end)
+////                        doc.replaceString(start, end, lines)
+//                    } }
+            }
+        }
     }
 }

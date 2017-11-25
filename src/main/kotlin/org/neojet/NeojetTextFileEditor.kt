@@ -1,9 +1,11 @@
 package org.neojet
 
 import com.intellij.codeHighlighting.BackgroundEditorHighlighter
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.TextEditorBackgroundHighlighter
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.editor.ex.MarkupModelEx
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.ex.RangeHighlighterEx
 import com.intellij.openapi.editor.impl.event.MarkupModelListener
 import com.intellij.openapi.fileEditor.FileEditor
@@ -18,6 +20,7 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.pom.Navigatable
 import io.neovim.java.Buffer
+import io.neovim.java.Neovim
 import org.neojet.gui.NeojetEditorPanel
 import org.neojet.gui.NeojetShortcutKeyAction
 import java.beans.PropertyChangeListener
@@ -39,6 +42,8 @@ class NeojetTextFileEditor(
 
     val nvim = NJCore.instance.attach(this)
 
+    var isModifiedFlag = false
+
     private val myBackgroundHighlighter by lazy(LazyThreadSafetyMode.NONE) {
         TextEditorBackgroundHighlighter(project, getEditor())
     }
@@ -46,21 +51,30 @@ class NeojetTextFileEditor(
     init {
         NeojetShortcutKeyAction.install(this)
 
-        (getEditor().markupModel as MarkupModelEx)
-            .addMarkupModelListener(this, object : MarkupModelListener {
-                override fun attributesChanged(highlighter: RangeHighlighterEx, renderersChanged: Boolean, fontStyleOrColorChanged: Boolean) {
-                    System.out.println("Attrs changed: $highlighter")
-                }
+        val buffer = getEditor().getUserData(NVIM_BUFFER_KEY)!!
 
-                override fun beforeRemoved(highlighter: RangeHighlighterEx) {
-                    System.out.println("Remove $highlighter")
-                }
+        val markupListener = object : MarkupModelListener {
+            override fun attributesChanged(highlighter: RangeHighlighterEx, renderersChanged: Boolean, fontStyleOrColorChanged: Boolean) {
+                System.out.println("Attrs changed: #${highlighter.id} $highlighter / ${highlighter.errorStripeTooltip}")
+            }
 
-                override fun afterAdded(highlighter: RangeHighlighterEx) {
-                    System.out.println("Add $highlighter")
-                }
+            override fun beforeRemoved(highlighter: RangeHighlighterEx) {
+                System.out.println("Remove #${highlighter.id} $highlighter")
+                nvim.highlightCmd(buffer, "delete", highlighter)
+            }
 
-            })
+            override fun afterAdded(highlighter: RangeHighlighterEx) {
+                System.out.println("Add #${highlighter.id} $highlighter / ${highlighter.errorStripeTooltip}")
+                nvim.highlightCmd(buffer, "create", highlighter)
+            }
+
+        }
+
+        val parentDisposable = this
+        (getEditor() as EditorEx).apply {
+            markupModel.addMarkupModelListener(parentDisposable, markupListener)
+            filteredDocumentMarkupModel.addMarkupModelListener(parentDisposable, markupListener)
+        }
     }
 
     override fun getEditor(): Editor {
@@ -85,9 +99,7 @@ class NeojetTextFileEditor(
 
     }
 
-    override fun isModified(): Boolean {
-        return false
-    }
+    override fun isModified(): Boolean = isModifiedFlag
 
     override fun isValid(): Boolean {
         return true
@@ -150,5 +162,50 @@ private fun createEditor(project: Project, vFile: VirtualFile): TextEditor {
 private fun getProvider(project: Project, vFile: VirtualFile): FileEditorProvider? {
     val providers = FileEditorProviderManagerImpl.getInstance().getProviders(project, vFile)
     return providers.firstOrNull { it !is NeojetEditorProvider }
+}
+
+private fun Neovim.highlightCmd(buffer: Buffer, type: String, highlighter: RangeHighlighterEx) {
+    val tooltipObj = highlighter.errorStripeTooltip
+    val description: String
+    val severity: HighlightSeverity
+    if (tooltipObj is HighlightInfo) {
+        description = tooltipObj.description ?: ""
+        severity = tooltipObj.severity
+    } else {
+        description = tooltipObj?.toString() ?: ""
+        severity = HighlightSeverity.WARNING
+    }
+
+    if (description.isEmpty()) {
+        // just ignore things without descriptions, I guess?
+        return
+    }
+
+    command(StringBuilder(256).apply {
+        append("call neojet#hl_")
+        append(type)
+        append("(")
+
+        append(buffer.id)
+        append(",")
+
+        append(highlighter.id)
+        append(",")
+
+        append(highlighter.startOffset)
+        append(",")
+        append(highlighter.endOffset)
+        append(",")
+
+        append('"')
+        append(description.replace("\"", "\\\""))
+        append('"')
+
+        append(",\"")
+        append(severity.name)
+        append("\")")
+
+    }.toString())
+        .subscribe()
 }
 
