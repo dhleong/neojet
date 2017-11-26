@@ -1,6 +1,5 @@
 package org.neojet
 
-import com.intellij.codeHighlighting.BackgroundEditorHighlighter
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.TextEditorBackgroundHighlighter
 import com.intellij.lang.annotation.HighlightSeverity
@@ -23,7 +22,9 @@ import io.neovim.java.Buffer
 import io.neovim.java.Neovim
 import org.neojet.gui.NeojetEditorPanel
 import org.neojet.gui.NeojetShortcutKeyAction
+import org.neojet.gui.UiThreadScheduler
 import java.beans.PropertyChangeListener
+import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
 
 val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
@@ -95,7 +96,7 @@ class NeojetTextFileEditor(
 
     override fun getComponent(): JComponent = panel
 
-    override fun getPreferredFocusedComponent(): JComponent? = panel
+    override fun getPreferredFocusedComponent(): JComponent = panel
 
     override fun getName(): String = "neojet"
 
@@ -118,6 +119,8 @@ class NeojetTextFileEditor(
             nvim.current.bufferSet(it)
                 .blockingGet()
         }
+
+        demandFocus()
     }
 
     override fun deselectNotify() {
@@ -132,11 +135,7 @@ class NeojetTextFileEditor(
 
     }
 
-    override fun getBackgroundHighlighter(): BackgroundEditorHighlighter? {
-//        System.out.println("TODO getBackgroundHighlighter")
-        return myBackgroundHighlighter
-//        return null
-    }
+    override fun getBackgroundHighlighter() = myBackgroundHighlighter
 
     override fun getCurrentLocation(): FileEditorLocation? {
         System.out.println("TODO getCurrentLocation")
@@ -146,6 +145,19 @@ class NeojetTextFileEditor(
     override fun dispose() {
         NeojetShortcutKeyAction.uninstall(this)
         panel.dispose()
+    }
+
+    /**
+     * A very insistent way to take focus
+     */
+    private fun demandFocus() {
+        if (!panel.isFocusOwner) {
+            panel.requestFocusInWindow()
+
+            UiThreadScheduler.instance.scheduleDirect(100, TimeUnit.MILLISECONDS) {
+                demandFocus()
+            }
+        }
     }
 
 }

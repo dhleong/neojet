@@ -32,10 +32,16 @@ class UiThreadScheduler : Scheduler() {
         return timed
     }
 
+    inline fun scheduleDirect(delay: Long, unit: TimeUnit, crossinline block: () -> Unit): Disposable {
+        return scheduleDirect({
+            block()
+        }, delay, unit)
+    }
+
     override fun createWorker(): Worker = SwingWorker(this)
 
 
-    class SwingWorker(val scheduler: UiThreadScheduler) : Worker() {
+    class SwingWorker(private val scheduler: UiThreadScheduler) : Worker() {
         private var disposed = false
 
         override fun isDisposed(): Boolean = disposed
@@ -75,7 +81,7 @@ class UiThreadScheduler : Scheduler() {
             initialDelayMillis: Int = -1
     ) : ScheduledRunnable(actual) {
 
-        val actionListener: ActionListener = ActionListener {
+        private val actionListener: ActionListener = ActionListener {
             run()
 
             if (!periodic) {
