@@ -149,6 +149,14 @@ fun runUndoTransparently(action: () -> Unit) {
     CommandProcessor.getInstance().runUndoTransparentAction(action)
 }
 
+inline fun runWriteActionUndoTransparently(crossinline action: () -> Unit) {
+    inWriteAction {
+        runUndoTransparently {
+            action()
+        }
+    }
+}
+
 /**
  * Execute the given block in a write action on the event dispatch
  *  thread, waiting for the result

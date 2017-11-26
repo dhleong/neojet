@@ -109,16 +109,16 @@ fun! s:OnTextChanged()
         call neojet#bvent('text_changed', {
             \ 'type': 'incremental',
             \ 'mod': &modified,
-            \ 'start': line('.'),
-            \ 'end': line('.'),
+            \ 'start': line('.') - 1,
+            \ 'end': line('.') - 1,
             \ 'text': getline('.'),
             \ })
     else
         call neojet#bvent('text_changed', {
             \ 'type': 'range',
             \ 'mod': &modified,
-            \ 'start': line('w0'),
-            \ 'end': line('w$'),
+            \ 'start': line('w0') - 1,
+            \ 'end': line('w$') - 1,
             \ 'text': '',
             \ })
     endif

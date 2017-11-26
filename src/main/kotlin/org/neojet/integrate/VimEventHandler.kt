@@ -2,12 +2,15 @@ package org.neojet.integrate
 
 import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.CompletionType
-import com.intellij.openapi.application.runUndoTransparentWriteAction
+import io.neovim.java.Buffer
 import io.neovim.java.event.Event
+import org.neojet.NeojetTextFileEditor
 import org.neojet.events.TextChangedEvent
+import org.neojet.gui.UiThreadScheduler
 import org.neojet.util.BufferManager
 import org.neojet.util.EventDispatcher
 import org.neojet.util.HandlesEvent
+import org.neojet.util.runWriteActionUndoTransparently
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -38,31 +41,19 @@ class VimEventHandler(
         val change = event.arg
         editor.isModifiedFlag = change.mod
 
-        runUndoTransparentWriteAction {
+        runWriteActionUndoTransparently {
             if (!change.mod) {
                 // the file is persisted to disk; just refresh
                 editor.vFile.refresh(true, false)
             } else if (change.type == "incremental") {
                 // replace a range
-//                val doc = editor.editor.document
-//                val start = doc.getLineStartOffset(change.start)
-//                val end = doc.getLineEndOffset(change.end)
-//                doc.replaceString(start, end, change.text)
+                val doc = editor.editor.document
+                val start = doc.getLineStartOffset(change.start)
+                val end = doc.getLineEndOffset(change.end)
+                doc.replaceString(start, end, change.text)
             } else {
                 // load a text range from the buffer
-                // TODO:
-//                buffer.lines(change.start, change.end)
-//                    .get()
-//                    .reduce(StringBuilder()) { builder, line ->
-//                        builder.append(line)
-//                    }
-//                    .observeOn(UiThreadScheduler.instance)
-//                    .subscribe { lines -> runUndoTransparentWriteAction {
-//                        val doc = editor.editor.document
-//                        val start = doc.getLineStartOffset(change.start)
-//                        val end = doc.getLineEndOffset(change.end)
-////                        doc.replaceString(start, end, lines)
-//                    } }
+                updateLinesFromBuffer(buffer, change, editor)
             }
 
             editor.editor.caretModel.primaryCaret
@@ -77,5 +68,23 @@ class VimEventHandler(
                     .scheduleAutoPopup(editor.panel.editor, CompletionType.SMART, null)
             }
         }
+
+    }
+
+    private fun updateLinesFromBuffer(buffer: Buffer, change: TextChangedEvent.Change, editor: NeojetTextFileEditor) {
+        buffer.lines(change.start, change.end + 1)
+            .get()
+            .reduce(StringBuilder()) { builder, line ->
+                builder.append(line)
+                builder.append('\n')
+            }
+            .observeOn(UiThreadScheduler.instance)
+            .subscribe { lines -> runWriteActionUndoTransparently {
+                lines.setLength(lines.length - 1)
+                val doc = editor.editor.document
+                val start = doc.getLineStartOffset(change.start)
+                val end = doc.getLineEndOffset(change.end)
+                doc.replaceString(start, end, lines)
+            } }
     }
 }
