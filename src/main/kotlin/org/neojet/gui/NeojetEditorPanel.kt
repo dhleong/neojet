@@ -4,12 +4,14 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.messages.MessageBusConnection
 import io.neovim.java.event.redraw.RedrawSubEvent
 import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.NJCore
+import org.neojet.NeojetEditor
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getEditorFont
 import org.neojet.util.input
@@ -35,11 +37,15 @@ import javax.swing.JPanel
 val EDITOR_ROWS_DEFAULT = 24
 val EDITOR_COLS_DEFAULT = 90
 
-class NeojetEditorPanel : JPanel(FlowLayout()), Disposable {
+class NeojetEditorPanel(
+    private val project: Project,
+    val editor: NeojetEditor
+) : JPanel(FlowLayout()), Disposable {
+
     val nvim = NJCore.instance.nvim!!
 
     private val subs = CompositeDisposable()
-    private val uiModel = UiModel()
+    internal val uiModel = UiModel()
 
     var rows: Int = EDITOR_ROWS_DEFAULT
     var cols: Int = EDITOR_COLS_DEFAULT

@@ -11,6 +11,7 @@ abstract class BufferEvent<T> : NotificationPacket<BufferEvent.BufferEventArg<T>
     @JsonFormat(shape = JsonFormat.Shape.ARRAY)
     class BufferEventArg<T> {
         var bufferId: Int = -1
+        var cursorOffset: Int = 0
 
         var arg: T? = null
     }

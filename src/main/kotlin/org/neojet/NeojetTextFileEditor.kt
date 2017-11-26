@@ -36,9 +36,12 @@ class NeojetTextFileEditor(
     val vFile: VirtualFile
 ) : UserDataHolderBase(), FileEditor, TextEditor {
 
-    private val editor: TextEditor = createEditor(project, vFile)
+    private val editor = NeojetEditor(
+        this,
+        createEditor(project, vFile).editor as EditorEx
+    )
 
-    val panel = NeojetEditorPanel()
+    val panel = NeojetEditorPanel(project, editor)
 
     val nvim = NJCore.instance.attach(this)
 
@@ -77,9 +80,11 @@ class NeojetTextFileEditor(
         }
     }
 
-    override fun getEditor(): Editor {
-        return editor.editor
-    }
+    // NOTE: various IntelliJ APIs implicitly require an EditorImpl
+    //  instance, so we can't return our "real" Editor here (but we
+    //  *do* need the "real" one for other APIs, like when we
+    //  trigger auto completion)
+    override fun getEditor(): Editor = editor.delegate
 
     override fun canNavigateTo(navigatable: Navigatable): Boolean {
         return false

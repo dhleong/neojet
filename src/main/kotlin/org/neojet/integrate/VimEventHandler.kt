@@ -1,5 +1,7 @@
 package org.neojet.integrate
 
+import com.intellij.codeInsight.AutoPopupController
+import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.openapi.application.runUndoTransparentWriteAction
 import io.neovim.java.event.Event
 import org.neojet.events.TextChangedEvent
@@ -34,8 +36,6 @@ class VimEventHandler(
             ?: return logger.log(Level.WARNING, "No editor for $event")
 
         val change = event.arg
-        System.out.println("onTextChanged @${editor.vFile}: $change")
-
         editor.isModifiedFlag = change.mod
 
         runUndoTransparentWriteAction {
@@ -63,6 +63,18 @@ class VimEventHandler(
 //                        val end = doc.getLineEndOffset(change.end)
 ////                        doc.replaceString(start, end, lines)
 //                    } }
+            }
+
+            editor.editor.caretModel.primaryCaret
+                .moveToOffset(event.value().cursorOffset)
+
+            if (editor.panel.uiModel.currentMode?.shortName == "i") {
+                // NOTE: we *need* the NeojetEditor instance here since it
+                //  will return the actual JComponent, unlike the EditorImpl
+                //  that we have to use in other places (and which gets
+                //  returned from NeojetTextFileEditor#getEditor)
+                AutoPopupController.getInstance(editor.project)
+                    .scheduleAutoPopup(editor.panel.editor, CompletionType.SMART, null)
             }
         }
     }

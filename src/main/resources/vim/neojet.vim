@@ -9,8 +9,20 @@ fun! neojet#rpc(method, ...)
 endfun
 let s:_rpc = function('neojet#rpc')
 
+fun! neojet#context()
+    " NOTE: the ordering here MUST match that of the
+    "  properties of BufferEventArg
+    let [l:_, l:lnum, l:col, l:_, l:_] = getcurpos()
+    let l:offset = line2byte(l:lnum) + l:col - 2
+
+    return [
+        \ bufnr('%'),
+        \ l:offset,
+        \ ]
+endfun
+
 fun! neojet#bvent(event, ...)
-    let l:args = [a:event, bufnr('%')] + a:000
+    let l:args = [a:event] + neojet#context() + a:000
     call call(s:_rpc, l:args)
 endfun
 
@@ -124,7 +136,8 @@ let g:neojet#version = 1
 
 
 " prepare ALE compat layer, if necessary
-fun! neojet#_AleCallback()
+fun! neojet#_AleCallback(...)
+    " ignore everything
 endfun
 
 if exists('g:ale_enabled') && !get(g:, '_neojet_init')
