@@ -14,8 +14,13 @@ class TextChangedEvent : BufferEvent<TextChangedEvent.Change>() {
         var start: Int = 0,
         var end: Int = 0,
         var text: String = ""
-    )
+    ) {
 
-    override fun toString(): String =
-        "TextChangedEvent(buf=$bufferId)"
+        // NOTE: when in range change mode,
+        //  the text field is reused for flags
+        val hasBufWritePostFlag: Boolean
+            get() = text == "BufWritePost"
+
+    }
+
 }

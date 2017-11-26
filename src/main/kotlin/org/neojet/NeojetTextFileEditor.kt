@@ -59,15 +59,14 @@ class NeojetTextFileEditor(
         val markupListener = object : MarkupModelListener {
             override fun attributesChanged(highlighter: RangeHighlighterEx, renderersChanged: Boolean, fontStyleOrColorChanged: Boolean) {
                 System.out.println("Attrs changed: #${highlighter.id} $highlighter / ${highlighter.errorStripeTooltip}")
+                // TODO update, I guess?
             }
 
             override fun beforeRemoved(highlighter: RangeHighlighterEx) {
-                System.out.println("Remove #${highlighter.id} $highlighter")
                 nvim.highlightCmd(buffer, "delete", highlighter)
             }
 
             override fun afterAdded(highlighter: RangeHighlighterEx) {
-                System.out.println("Add #${highlighter.id} $highlighter / ${highlighter.errorStripeTooltip}")
                 nvim.highlightCmd(buffer, "create", highlighter)
             }
 

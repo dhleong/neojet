@@ -14,6 +14,9 @@ abstract class BufferEvent<T> : NotificationPacket<BufferEvent.BufferEventArg<T>
         var cursorOffset: Int = 0
 
         var arg: T? = null
+
+        override fun toString(): String =
+            "BufferEventArg(bufferId=$bufferId, cursorOffset=$cursorOffset, arg=$arg)"
     }
 
     val bufferId: Long
@@ -22,6 +25,10 @@ abstract class BufferEvent<T> : NotificationPacket<BufferEvent.BufferEventArg<T>
     @Suppress("UNCHECKED_CAST")
     val arg: T
         get() = value().arg!!
+
+    private val className by lazy { javaClass.simpleName }
+
+    override fun toString(): String = "$className(${value()})"
 }
 
 val eventTypes = arrayOf(

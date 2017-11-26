@@ -93,7 +93,7 @@ fun! neojet#hl_delete(bufnr, id, start, end, desc, severity)
 endfun
 
 
-fun! s:OnTextChanged()
+fun! s:OnTextChanged(...)
     if !exists('b:last_change_tick')
         let b:last_change_tick = -1
     endif
@@ -107,19 +107,21 @@ fun! s:OnTextChanged()
 
     if mode() ==# 'i'
         call neojet#bvent('text_changed', {
-            \ 'type': 'incremental',
+            \ 'type': 'inc',
             \ 'mod': &modified,
             \ 'start': line('.') - 1,
             \ 'end': line('.') - 1,
             \ 'text': getline('.'),
             \ })
     else
+        let l:flag = a:0 ? a:1 : ''
+
         call neojet#bvent('text_changed', {
             \ 'type': 'range',
             \ 'mod': &modified,
             \ 'start': line('w0') - 1,
             \ 'end': line('w$') - 1,
-            \ 'text': '',
+            \ 'text': l:flag,
             \ })
     endif
 endfun
@@ -127,7 +129,7 @@ endfun
 augroup neojet_autocmds
     autocmd!
     autocmd BufWinEnter,BufReadPost * call neojet#rpc("buf_win_enter", expand('%:p'))
-    autocmd BufWritePost * call s:OnTextChanged()
+    autocmd BufWritePost * call s:OnTextChanged('BufWritePost')
     autocmd TextChanged,TextChangedI * call s:OnTextChanged()
     autocmd CursorMoved,CursorMovedI * call s:OnTextChanged()
 augroup END

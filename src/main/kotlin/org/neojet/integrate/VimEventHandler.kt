@@ -42,11 +42,13 @@ class VimEventHandler(
         val change = event.arg
         editor.isModifiedFlag = change.mod
 
+        val isIncremental = change.type == "inc"
+
         inWriteSafeTxn(editor) {
-            if (!change.mod) {
+            if (!isIncremental && change.hasBufWritePostFlag) {
                 // the file is persisted to disk; just refresh
                 editor.vFile.refresh(true, false)
-            } else if (change.type == "incremental") {
+            } else if (isIncremental) {
                 // replace a range
                 val doc = editor.editor.document
                 val start = doc.getLineStartOffset(change.start)
