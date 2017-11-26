@@ -2,6 +2,7 @@ package org.neojet.integrate
 
 import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.openapi.application.TransactionGuard
 import io.neovim.java.Buffer
 import io.neovim.java.event.Event
 import org.neojet.NeojetTextFileEditor
@@ -41,7 +42,7 @@ class VimEventHandler(
         val change = event.arg
         editor.isModifiedFlag = change.mod
 
-        runWriteActionUndoTransparently {
+        inWriteSafeTxn(editor) {
             if (!change.mod) {
                 // the file is persisted to disk; just refresh
                 editor.vFile.refresh(true, false)
@@ -68,7 +69,6 @@ class VimEventHandler(
                     .scheduleAutoPopup(editor.panel.editor, CompletionType.SMART, null)
             }
         }
-
     }
 
     private fun updateLinesFromBuffer(buffer: Buffer, change: TextChangedEvent.Change, editor: NeojetTextFileEditor) {
@@ -79,7 +79,7 @@ class VimEventHandler(
                 builder.append('\n')
             }
             .observeOn(UiThreadScheduler.instance)
-            .subscribe { lines -> runWriteActionUndoTransparently {
+            .subscribe { lines -> inWriteSafeTxn(editor) {
                 lines.setLength(lines.length - 1)
                 val doc = editor.editor.document
                 val start = doc.getLineStartOffset(change.start)
@@ -87,4 +87,12 @@ class VimEventHandler(
                 doc.replaceString(start, end, lines)
             } }
     }
+}
+
+private inline fun inWriteSafeTxn(editor: NeojetTextFileEditor, crossinline block: () -> Unit) {
+    TransactionGuard.submitTransaction(editor, Runnable {
+        runWriteActionUndoTransparently {
+            block()
+        }
+    })
 }
