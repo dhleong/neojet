@@ -12,6 +12,7 @@ import io.neovim.java.util.ModeInfo
 import io.reactivex.disposables.CompositeDisposable
 import org.neojet.NJCore
 import org.neojet.NeojetEditor
+import org.neojet.integrate.CompletionStateWatcher
 import org.neojet.util.bufferedRedrawEvents
 import org.neojet.util.getEditorFont
 import org.neojet.util.input
@@ -84,7 +85,28 @@ class NeojetEditorPanel(
 
         addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) {
-                nvim.input(e).subscribe()
+                CompletionStateWatcher.onKeyTyped()
+
+                // TODO refactor in such a way that users can map this
+                //  to whatever key they want
+                if (CompletionStateWatcher.isCompletionShown) {
+                    val consumed: Unit? = when (e.keyChar) {
+                        '\t' -> editor.performActionById("EditorChooseLookupItemReplace")
+                        '\n' -> editor.performActionById("EditorChooseLookupItem")
+                        '\u0010' -> editor.performActionById("EditorUp") // <c-p>
+                        '\u000E' -> editor.performActionById("EditorDown") // <c-n>
+
+                        else -> null
+                    }
+
+                    // consume if handled
+                    if (consumed != null) e.consume()
+                }
+
+                if (!e.isConsumed) {
+                    nvim.input(e).subscribe()
+                    e.consume()
+                }
             }
         })
 
@@ -173,14 +195,6 @@ class NeojetEditorPanel(
             }
         }
     }
-
-//    override fun processFocusEvent(e: FocusEvent) {
-//        super.processFocusEvent(e)
-//
-//        if (e.id == FocusEvent.FOCUS_GAINED) {
-//            System.out.println("focus $this")
-//        }
-//    }
 
     internal fun getFontSize(): Pair<Int, Int> {
         val fontMetrics = getFontMetrics(font)

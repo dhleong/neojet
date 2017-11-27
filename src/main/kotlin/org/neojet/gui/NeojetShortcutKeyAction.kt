@@ -8,7 +8,6 @@ import com.intellij.openapi.actionSystem.ShortcutSet
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.util.Key
 import org.neojet.NeojetTextFileEditor
-import org.neojet.util.input
 import java.awt.event.KeyEvent
 import java.awt.event.KeyEvent.*
 import javax.swing.KeyStroke
@@ -57,10 +56,13 @@ class NeojetShortcutKeyAction(
     override fun actionPerformed(e: AnActionEvent) {
 
         // TODO we may want to check for conflicts...
-        //  but for now, just pass along to nvim
+        //  but for now, just pass along to the editor
 
-        e.keyEvent?.let {
-            editor.nvim.input(it).subscribe()
+        e.keyEvent?.let { ev ->
+//            editor.nvim.input(it).subscribe()
+            editor.panel.keyListeners.forEach {
+                it.keyTyped(ev)
+            }
         }
     }
 

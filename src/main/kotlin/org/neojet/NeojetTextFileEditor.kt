@@ -25,9 +25,9 @@ import io.neovim.java.Buffer
 import io.neovim.java.Neovim
 import org.neojet.gui.NeojetEditorPanel
 import org.neojet.gui.NeojetShortcutKeyAction
-import org.neojet.gui.UiThreadScheduler
+import org.neojet.gui.demandFocus
+import org.neojet.integrate.CompletionStateWatcher
 import java.beans.PropertyChangeListener
-import java.util.concurrent.TimeUnit
 import javax.swing.JComponent
 
 val NVIM_BUFFER_KEY = Key<Buffer>("org.neojet.buffer")
@@ -132,7 +132,7 @@ class NeojetTextFileEditor(
                 .blockingGet()
         }
 
-        demandFocus()
+        panel.demandFocus()
     }
 
     override fun deselectNotify() {
@@ -159,22 +159,10 @@ class NeojetTextFileEditor(
         panel.dispose()
     }
 
-    /**
-     * A very insistent way to take focus
-     */
-    private fun demandFocus() {
-        if (!panel.isFocusOwner) {
-            panel.requestFocusInWindow()
-
-            UiThreadScheduler.instance.scheduleDirect(100, TimeUnit.MILLISECONDS) {
-                demandFocus()
-            }
-        }
-    }
-
     private fun cancelAutoComplete() {
         CompletionServiceImpl.getCompletionService()
             .currentCompletion?.closeAndFinish(true)
+        CompletionStateWatcher.canceled()
     }
 
     fun triggerAutoComplete() {
