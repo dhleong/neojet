@@ -10,6 +10,7 @@ import io.neovim.java.rpc.RequestPacket;
 import io.neovim.java.rpc.ResponsePacket;
 import io.neovim.java.rpc.channel.EmbedChannel;
 import io.neovim.java.rpc.channel.FallbackChannel;
+import io.neovim.java.util.NeovimCmdException;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.Single;
@@ -143,9 +144,8 @@ public class Rpc implements Closeable {
         ).timeout(TIMEOUT, TIMEOUT_UNIT)
          .flatMap(responsePacket -> {
              if (responsePacket.error != null) {
-                 // TODO NeovimException?
-                 return Single.error(new Exception(
-                     responsePacket.error.toString()
+                 return Single.error(new NeovimCmdException(
+                     request, responsePacket
                  ));
              }
 
