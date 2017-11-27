@@ -182,8 +182,13 @@ class NeojetTextFileEditor(
         //  will return the actual JComponent, unlike the EditorImpl
         //  that we have to use in other places (and which gets
         //  returned from NeojetTextFileEditor#getEditor)
-        AutoPopupController.getInstance(project)
-            .scheduleAutoPopup(panel.editor, CompletionType.SMART, null)
+        val current = CompletionServiceImpl.getCompletionService().currentCompletion
+        if (current == null) {
+            AutoPopupController.getInstance(project)
+                .scheduleAutoPopup(panel.editor, CompletionType.SMART, null)
+        } else {
+            current.prefixUpdated()
+        }
     }
 
 }
