@@ -1,7 +1,5 @@
 package org.neojet.integrate
 
-import com.intellij.codeInsight.AutoPopupController
-import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.openapi.application.TransactionGuard
 import io.neovim.java.Buffer
 import io.neovim.java.event.Event
@@ -62,15 +60,11 @@ class VimEventHandler(
             editor.editor.caretModel.primaryCaret
                 .moveToOffset(event.value().cursorOffset)
 
-            if (editor.panel.uiModel.currentMode?.shortName == "i") {
-                // NOTE: we *need* the NeojetEditor instance here since it
-                //  will return the actual JComponent, unlike the EditorImpl
-                //  that we have to use in other places (and which gets
-                //  returned from NeojetTextFileEditor#getEditor)
-                AutoPopupController.getInstance(editor.project)
-                    .scheduleAutoPopup(editor.panel.editor, CompletionType.SMART, null)
+            if (editor.panel.uiModel.currentMode?.isInsert == true) {
+                editor.triggerAutoComplete()
             }
         }
+
     }
 
     private fun updateLinesFromBuffer(buffer: Buffer, change: TextChangedEvent.Change, editor: NeojetTextFileEditor) {

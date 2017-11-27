@@ -43,5 +43,14 @@ public class ModeInfo {
 
     @Nonnull public String name = "";
     @Nonnull public String shortName = "";
+
+    public boolean isInsert() {
+        return "i".equals(shortName);
+    }
+
+    public boolean isNormal() {
+        return "n".equals(shortName);
+    }
+
 }
 

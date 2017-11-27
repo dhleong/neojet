@@ -1,5 +1,8 @@
 package org.neojet
 
+import com.intellij.codeInsight.AutoPopupController
+import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.TextEditorBackgroundHighlighter
 import com.intellij.lang.annotation.HighlightSeverity
@@ -42,7 +45,16 @@ class NeojetTextFileEditor(
         createEditor(project, vFile).editor as EditorEx
     )
 
-    val panel = NeojetEditorPanel(project, editor)
+    val panel = NeojetEditorPanel(project, editor).also {
+
+        // hide completion lookup when exiting insert mode
+        it.uiModel.addModeChangeListener { mode ->
+            if (!mode.isInsert) {
+                cancelAutoComplete()
+            }
+        }
+
+    }
 
     val nvim = NJCore.instance.attach(this)
 
@@ -158,6 +170,20 @@ class NeojetTextFileEditor(
                 demandFocus()
             }
         }
+    }
+
+    private fun cancelAutoComplete() {
+        CompletionServiceImpl.getCompletionService()
+            .currentCompletion?.closeAndFinish(true)
+    }
+
+    fun triggerAutoComplete() {
+        // NOTE: we *need* the NeojetEditor instance here since it
+        //  will return the actual JComponent, unlike the EditorImpl
+        //  that we have to use in other places (and which gets
+        //  returned from NeojetTextFileEditor#getEditor)
+        AutoPopupController.getInstance(project)
+            .scheduleAutoPopup(panel.editor, CompletionType.SMART, null)
     }
 
 }

@@ -103,6 +103,8 @@ class UiModel {
     private var modes: List<ModeInfo> = emptyList()
     private var mode: ModeInfo? = null
 
+    private val modeChangeListeners = mutableListOf<(newMode: ModeInfo) -> Unit>()
+
     fun resize(rows: Int, cols: Int) {
         cells = cells.resizeTo(rows, cols, this::createEmptyCell)
     }
@@ -150,8 +152,12 @@ class UiModel {
     fun onModeChange(event: ModeChangeEvent) {
         val index = event.value[0].modeIndex
         if (index < modes.size) {
-            modes[index].let {
-                mode = it
+            modes[index].let { newMode ->
+                mode = newMode
+                
+                modeChangeListeners.forEach {
+                    it.invoke(newMode)
+                }
             }
         }
     }
@@ -290,6 +296,10 @@ class UiModel {
 
     @Suppress("UNUSED_PARAMETER")
     private fun createEmptyCell(row: Int, col: Int): Cell = Cell(" ")
+
+    fun addModeChangeListener(listener: (newMode: ModeInfo) -> Unit) {
+        modeChangeListeners.add(listener)
+    }
 }
 
 private fun Int.toColor(): Color = Color(this)

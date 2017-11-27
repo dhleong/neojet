@@ -130,6 +130,7 @@ augroup neojet_autocmds
     autocmd!
     autocmd BufWinEnter,BufReadPost * call neojet#rpc("buf_win_enter", expand('%:p'))
     autocmd BufWritePost * call s:OnTextChanged('BufWritePost')
+    autocmd InsertEnter,InsertLeave * call s:OnTextChanged()
     autocmd TextChanged,TextChangedI * call s:OnTextChanged()
     autocmd CursorMoved,CursorMovedI * call s:OnTextChanged()
 augroup END
