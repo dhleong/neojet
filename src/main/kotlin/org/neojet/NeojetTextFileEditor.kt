@@ -27,6 +27,7 @@ import org.neojet.gui.NeojetEditorPanel
 import org.neojet.gui.NeojetShortcutKeyAction
 import org.neojet.gui.demandFocus
 import org.neojet.integrate.CompletionStateWatcher
+import org.neojet.integrate.DocumentChangeListener
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
 
@@ -64,10 +65,12 @@ class NeojetTextFileEditor(
         TextEditorBackgroundHighlighter(project, getEditor())
     }
 
+    private val documentChangeListener = DocumentChangeListener(this)
+
     init {
         NeojetShortcutKeyAction.install(this)
 
-        val buffer = getEditor().getUserData(NVIM_BUFFER_KEY)!!
+        val buffer = getBuffer()
 
         val markupListener = object : MarkupModelListener {
             override fun attributesChanged(highlighter: RangeHighlighterEx, renderersChanged: Boolean, fontStyleOrColorChanged: Boolean) {
@@ -85,12 +88,17 @@ class NeojetTextFileEditor(
 
         }
 
+        getEditor().document.addDocumentListener(documentChangeListener)
+
         val parentDisposable = this
         (getEditor() as EditorEx).apply {
             markupModel.addMarkupModelListener(parentDisposable, markupListener)
             filteredDocumentMarkupModel.addMarkupModelListener(parentDisposable, markupListener)
         }
     }
+
+    fun getBuffer(): Buffer =
+        getEditor().getUserData(NVIM_BUFFER_KEY)!!
 
     // NOTE: various IntelliJ APIs implicitly require an EditorImpl
     //  instance, so we can't return our "real" Editor here (but we
@@ -179,6 +187,27 @@ class NeojetTextFileEditor(
         }
     }
 
+    fun acceptExternalEdit(block: () -> Unit) {
+        if (documentChangeListener.isTriggeringExternalEdit.get()) {
+            return
+        }
+
+        documentChangeListener.isAcceptingExternalEdit.set(true)
+        try {
+            block()
+        } finally {
+            documentChangeListener.isAcceptingExternalEdit.set(false)
+        }
+    }
+
+    fun triggerExternalEdit(block: () -> Unit) {
+        documentChangeListener.isTriggeringExternalEdit.set(true)
+        try {
+            block()
+        } finally {
+            documentChangeListener.isTriggeringExternalEdit.set(false)
+        }
+    }
 }
 
 private fun createEditor(project: Project, vFile: VirtualFile): TextEditor {

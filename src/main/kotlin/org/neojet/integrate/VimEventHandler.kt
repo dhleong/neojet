@@ -51,7 +51,10 @@ class VimEventHandler(
                 val doc = editor.editor.document
                 val start = doc.getLineStartOffset(change.start)
                 val end = doc.getLineEndOffset(change.end)
-                doc.replaceString(start, end, change.text)
+
+                editor.acceptExternalEdit {
+                    doc.replaceString(start, end, change.text)
+                }
             } else {
                 // load a text range from the buffer
                 updateLinesFromBuffer(buffer, change, editor)
@@ -80,7 +83,10 @@ class VimEventHandler(
                 val doc = editor.editor.document
                 val start = doc.getLineStartOffset(change.start)
                 val end = doc.getLineEndOffset(change.end)
-                doc.replaceString(start, end, lines)
+
+                editor.acceptExternalEdit {
+                    doc.replaceString(start, end, lines)
+                }
             } }
     }
 }
