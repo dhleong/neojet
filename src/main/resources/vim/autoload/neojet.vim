@@ -8,11 +8,11 @@ endfun
 let s:_rpc = function('neojet#rpc')
 
 fun! neojet#context()
-    " NOTE: the ordering here MUST match that of the
-    "  properties of BufferEventArg
     let [l:_, l:lnum, l:col, l:_, l:_] = getcurpos()
     let l:offset = line2byte(l:lnum) + l:col - 2
 
+    " NOTE: the ordering here MUST match that of the
+    "  properties of BufferEventArg
     return [
         \ bufnr('%'),
         \ l:offset,
