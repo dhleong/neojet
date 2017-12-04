@@ -1,6 +1,7 @@
 package org.neojet.events
 
 import assertk.assert
+import assertk.assertAll
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.fasterxml.jackson.databind.JavaType
@@ -41,8 +42,9 @@ class BufferEventTest {
         pack.packArrayHeader(3)
         pack.packInt(Packet.Type.NOTIFICATION.ordinal)
         pack.packString("text_changed")
-        pack.packArrayHeader(2)
-        pack.packInt(42)
+        pack.packArrayHeader(3)
+        pack.packInt(42) // buffer number
+        pack.packInt(9001) // cursor offset
         pack.packMapHeader(4)
         pack.packString("type")
         pack.packString("incremental")
@@ -63,8 +65,12 @@ class BufferEventTest {
 
         assert(packet).isInstanceOf(TextChangedEvent::class)
         val event = packet as TextChangedEvent
-        val arg = event.arg
+        assertAll {
+            assert(event.value().bufferId).isEqualTo(42)
+            assert(event.value().cursorOffset).isEqualTo(9001)
+        }
 
+        val arg = event.arg
         assert(arg).isInstanceOf(TextChangedEvent.Change::class)
     }
 

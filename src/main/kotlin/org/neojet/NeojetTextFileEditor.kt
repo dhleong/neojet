@@ -246,7 +246,7 @@ private fun Neovim.highlightCmd(buffer: Buffer, type: String, highlighter: Range
     }
 
     command(StringBuilder(256).apply {
-        append("call neojet#hl_")
+        append("call neojet#hl#")
         append(type)
         append("(")
 

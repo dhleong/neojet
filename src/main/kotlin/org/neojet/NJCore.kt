@@ -91,7 +91,7 @@ class NJCore : ApplicationComponent, Disposable {
 
         this.nvim = nvim
 
-        nvim.sourceRes("vim/neojet.vim")
+        nvim.sourceRes("vim/plugin/neojet.vim")
             .blockingGet()
 
         subs.add(
